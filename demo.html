@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Curved Label with auto angle</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      padding: 2rem;
+      margin: 0;
+      box-sizing: border-box;
+    }
+    .controls {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      flex-wrap: wrap;
+      margin-bottom: 1rem;
+    }
+    .controls label {
+      white-space: nowrap;
+    }
+    input {
+      width: 120px;
+      padding: 0.3rem;
+    }
+    svg {
+      border: 1px solid #ccc;
+      background: #f8f8f8;
+      display: block;
+      margin: auto;
+    }
+    path {
+      fill: #eee;
+      stroke: #333;
+      stroke-width: 2;
+    }
+    .warning {
+      color: red;
+      margin-top: 0.5rem;
+      font-weight: bold;
+    }
+  </style>
+</head>
+<body>
+
+  <h2>Curved Label Generator (auto angle from top/bottom widths & height)</h2>
+
+  <div class="controls">
+    <label>Inner Radius (mm): <input type="number" id="innerRadiusMm" value="183.19" step="0.01" /></label>
+    <label>Height (mm): <input type="number" id="heightMm" value="37.92" step="0.01" /></label>
+    <label>Top Width (mm): <input type="number" id="topWidthMm" value="295.91" step="0.01" /></label>
+    <label>Bottom Width (mm): <input type="number" id="bottomWidthMm" value="245.14" step="0.01" /></label>
+    <button onclick="draw()">Draw</button>
+  </div>
+
+  <div id="warning" class="warning"></div>
+
+  <svg id="svg" width="800" height="600" viewBox="0 0 800 600" preserveAspectRatio="xMidYMid meet"></svg>
+
+  <script>
+    const mmToPx = mm => mm / 0.264583;
+
+    function polarToCartesian(cx, cy, r, angleDeg) {
+      const angleRad = (angleDeg - 90) * Math.PI / 180.0;
+      return {
+        x: cx + r * Math.cos(angleRad),
+        y: cy + r * Math.sin(angleRad)
+      };
+    }
+
+    function draw() {
+      const warningDiv = document.getElementById('warning');
+      warningDiv.textContent = '';
+
+      const innerRadiusMm = parseFloat(document.getElementById('innerRadiusMm').value);
+      const heightMm = parseFloat(document.getElementById('heightMm').value);
+      const topWidthMm = parseFloat(document.getElementById('topWidthMm').value);
+      const bottomWidthMm = parseFloat(document.getElementById('bottomWidthMm').value);
+
+      if (innerRadiusMm <= 0 || heightMm <= 0 || topWidthMm <= 0 || bottomWidthMm <= 0) {
+        warningDiv.textContent = 'All inputs must be positive numbers.';
+        return;
+      }
+
+      const outerRadiusMm = innerRadiusMm + heightMm;
+
+      // Check ratio to validate if shape possible
+      const expectedRatio = outerRadiusMm / innerRadiusMm;
+      const inputRatio = topWidthMm / bottomWidthMm;
+
+      // Allow small tolerance
+      const tolerance = 0.02;
+
+      if (Math.abs(expectedRatio - inputRatio) > tolerance) {
+        warningDiv.textContent = 
+          `Warning: The ratio of topWidth/bottomWidth (${inputRatio.toFixed(3)}) ` +
+          `does not match outerRadius/innerRadius (${expectedRatio.toFixed(3)}). ` +
+          `Adjust widths or radii to form a valid shape.`;
+      }
+
+      // Compute angle θ from topWidth and outerRadius:
+      // chord length = 2 * r * sin(θ/2) => θ = 2 * arcsin(chord/(2r))
+      if (topWidthMm > 2 * outerRadiusMm) {
+        warningDiv.textContent = 'Top width is too large for the given outer radius.';
+        return;
+      }
+
+      const angleRad = 2 * Math.asin(topWidthMm / (2 * outerRadiusMm));
+      const angleDeg = angleRad * 180 / Math.PI;
+
+      // Convert radii to pixels
+      const innerRadius = mmToPx(innerRadiusMm);
+      const outerRadius = mmToPx(outerRadiusMm);
+
+      const svg = document.getElementById("svg");
+      svg.innerHTML = "";
+
+      const width = svg.viewBox.baseVal.width;
+      const height = svg.viewBox.baseVal.height;
+      const cx = width / 2;
+      const cy = height / 2;
+
+      const startAngle = -angleDeg / 2;
+      const endAngle = angleDeg / 2;
+
+      const startOuter = polarToCartesian(cx, cy, outerRadius, startAngle);
+      const endOuter = polarToCartesian(cx, cy, outerRadius, endAngle);
+      const startInner = polarToCartesian(cx, cy, innerRadius, endAngle);
+      const endInner = polarToCartesian(cx, cy, innerRadius, startAngle);
+
+      const largeArcFlag = angleDeg > 180 ? 1 : 0;
+
+      const pathData = [
+        `M ${startOuter.x} ${startOuter.y}`,
+        `A ${outerRadius} ${outerRadius} 0 ${largeArcFlag} 1 ${endOuter.x} ${endOuter.y}`,
+        `L ${startInner.x} ${startInner.y}`,
+        `A ${innerRadius} ${innerRadius} 0 ${largeArcFlag} 0 ${endInner.x} ${endInner.y}`,
+        `Z`
+      ].join(" ");
+
+      const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+      path.setAttribute("d", pathData);
+      svg.appendChild(path);
+    }
+
+    draw();
+  </script>
+
+</body>
+</html>

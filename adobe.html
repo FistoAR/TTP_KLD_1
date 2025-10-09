@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="adobe.css">
+    <title>Adobe View</title>
+</head>
+<body>
+    <div class="controls">
+        <label
+        >Select shape
+        <select id="diagramType" onchange="updateInputs()">
+          <option value="curveRectangle500" selected>500ml Round TUB</option>
+          <option value="curveRectangle250">250ml Round TUB</option>
+        </select>
+      </label>
+    </div>
+    <div class="box_container">
+      <canvas id="kldCanvas"></canvas>
+    </div>
+    <script src="adobe.js"></script>
+</body>
+</html>

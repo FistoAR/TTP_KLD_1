@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Curved Image Bender</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: Arial, sans-serif;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .input-section {
+            min-height: 15vh;
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            justify-content: center;
+            gap: 15px;
+            background: #f0f0f0;
+            padding: 20px;
+        }
+
+        .input-group {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        .input-group label {
+            font-size: 12px;
+            font-weight: bold;
+            color: #333;
+        }
+
+        .input-group input {
+            padding: 8px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            width: 120px;
+        }
+
+        input[type="file"] {
+            padding: 8px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+
+        button {
+            padding: 10px 20px;
+            background: #007bff;
+            color: white;
+            border: none;
+            cursor: pointer;
+            border-radius: 4px;
+            font-weight: bold;
+        }
+
+        button:hover {
+            background: #0056b3;
+        }
+
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+
+        .canvas-section {
+            height: 90vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background: #fff;
+            overflow: auto;
+            padding: 20px;
+        }
+
+        .image-container {
+            position: relative;
+            display: inline-block;
+        }
+
+        canvas {
+            border: 1px solid #ccc;
+            max-width: 95%;
+            max-height: 85vh;
+            object-fit: contain;
+            display: block;
+            position: relative;
+        }
+
+        #svgOverlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    display: none;
+    opacity: 0.5;  /* Adjust: 0 = fully transparent, 1 = fully opaque */
+    mix-blend-mode: normal;  /* Can change to 'multiply', 'screen', etc. for blend effects */
+}
+
+    </style>
+</head>
+<body>
+    <div class="input-section">
+        <div class="input-group">
+            <label>Top Circumference (mm)</label>
+            <input type="number" id="topCircumference" value="295.91" step="0.01">
+        </div>
+        <div class="input-group">
+            <label>Bottom Circumference (mm)</label>
+            <input type="number" id="bottomCircumference" value="245.14" step="0.01">
+        </div>
+        <div class="input-group">
+            <label>Height (mm)</label>
+            <input type="number" id="height" value="37.92" step="0.01">
+        </div>
+        <div class="input-group">
+            <label>Upload Image</label>
+            <input type="file" id="imageInput" accept="image/*">
+        </div>
+        <div class="input-group">
+            <label>Upload SVG Overlay</label>
+            <input type="file" id="svgInput" accept=".svg,image/svg+xml">
+        </div>
+        <button id="generateBtn" disabled>Bend Image</button>
+        <button id="downloadBtn" disabled>Download PNG</button>
+    </div>
+
+    <div class="canvas-section">
+        <div class="image-container">
+            <canvas id="canvas"></canvas>
+            <img id="svgOverlay" alt="SVG Overlay">
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        const imageInput = document.getElementById('imageInput');
+        const svgInput = document.getElementById('svgInput');
+        const svgOverlay = document.getElementById('svgOverlay');
+        const generateBtn = document.getElementById('generateBtn');
+        const downloadBtn = document.getElementById('downloadBtn');
+        const topCircInput = document.getElementById('topCircumference');
+        const bottomCircInput = document.getElementById('bottomCircumference');
+        const heightInput = document.getElementById('height');
+        
+        let currentImage = null;
+        let currentSVGData = null;
+        let shapeData = null;
+
+        // Load image
+        imageInput.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                const img = new Image();
+                img.onload = () => {
+                    currentImage = img;
+                    generateBtn.disabled = false;
+                    
+                    // Show preview
+                    canvas.width = Math.min(1200, img.width);
+                    canvas.height = Math.min(800, img.height);
+                    ctx.clearRect(0, 0, canvas.width, canvas.height);
+                    
+                    const scale = Math.min(canvas.width / img.width, canvas.height / img.height, 1);
+                    const w = img.width * scale;
+                    const h = img.height * scale;
+                    const x = (canvas.width - w) / 2;
+                    const y = (canvas.height - h) / 2;
+                    
+                    ctx.fillStyle = '#ffffff';
+                    ctx.fillRect(0, 0, canvas.width, canvas.height);
+                    ctx.drawImage(img, x, y, w, h);
+                    
+                    console.log('✅ Image loaded:', img.width, 'x', img.height);
+                };
+                img.src = event.target.result;
+            };
+            reader.readAsDataURL(file);
+        });
+
+        // Load SVG
+        svgInput.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                currentSVGData = event.target.result;
+                const dataUrl = 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(currentSVGData)));
+                svgOverlay.src = dataUrl;
+                console.log('✅ SVG loaded successfully!');
+            };
+            reader.readAsText(file);
+        });
+
+        // Calculate truncated cone unwrap geometry
+        function calculateConeUnwrap(topCirc, bottomCirc, height) {
+            const topRadius = topCirc / (2 * Math.PI);
+            const bottomRadius = bottomCirc / (2 * Math.PI);
+            
+            const smallerRadius = Math.min(topRadius, bottomRadius);
+            const largerRadius = Math.max(topRadius, bottomRadius);
+            
+            const slantHeight = Math.sqrt(Math.pow(largerRadius - smallerRadius, 2) + Math.pow(height, 2));
+            const apexDistance = (height * smallerRadius) / (largerRadius - smallerRadius);
+            
+            const innerRadius = apexDistance;
+            const outerRadius = apexDistance + slantHeight;
+            const sectorAngle = largerRadius * 2 * Math.PI / outerRadius;
+            
+            return {
+                innerRadius,
+                outerRadius,
+                sectorAngle,
+                topRadius,
+                bottomRadius,
+                slantHeight,
+                apexDistance,
+                isTopLarger: topRadius > bottomRadius
+            };
+        }
+
+        // Generate the curved image
+        generateBtn.addEventListener('click', () => {
+            if (!currentImage) return;
+
+            const topCirc = parseFloat(topCircInput.value);
+            const bottomCirc = parseFloat(bottomCircInput.value);
+            const height = parseFloat(heightInput.value);
+
+            if (!topCirc || !bottomCirc || !height || topCirc === bottomCirc) {
+                alert('Please enter valid dimensions. Top and bottom circumferences must be different.');
+                return;
+            }
+
+            const geometry = calculateConeUnwrap(topCirc, bottomCirc, height);
+            const { innerRadius, outerRadius, sectorAngle, isTopLarger } = geometry;
+            
+            // Convert mm to pixels (96 DPI standard: 1mm = 3.7795275591 pixels)
+            const mmToPx = 3.7795275591;
+            
+            const scaledInnerR = innerRadius * mmToPx;
+            const scaledOuterR = outerRadius * mmToPx;
+            
+            const patternWidth = 2 * scaledOuterR * Math.sin(sectorAngle / 2);
+            const patternHeight = scaledOuterR - scaledOuterR * Math.cos(sectorAngle / 2);
+            
+            // Add extra padding to ensure full visibility
+            const paddingX = 250;
+            const paddingY = 250;
+            
+            // Calculate canvas dimensions based on actual mm size
+            canvas.width = Math.ceil(patternWidth + paddingX * 2);
+            canvas.height = Math.ceil(patternHeight + paddingY * 2);
+            
+            const centerX = canvas.width / 2;
+            const centerY = scaledOuterR + paddingY;
+            
+            const startAngle = Math.PI / 2 - sectorAngle / 2;
+            const endAngle = Math.PI / 2 + sectorAngle / 2;
+            
+            // Clear with white background
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            function getArcPoint(radius, angle) {
+                return {
+                    x: centerX + radius * Math.cos(angle),
+                    y: centerY - radius * Math.sin(angle)
+                };
+            }
+            
+            // Warp image
+            const imgWidth = currentImage.width;
+            const imgHeight = currentImage.height;
+            const sliceCount = 3000;
+            
+            console.log('🖼️ Drawing bent image:', imgWidth, 'x', imgHeight);
+            
+            // Draw bent base image
+            for (let i = 0; i < sliceCount; i++) {
+                const t1 = i / sliceCount;
+                const t2 = (i + 1) / sliceCount;
+                
+                const angle1 = startAngle + (endAngle - startAngle) * t1;
+                const angle2 = startAngle + (endAngle - startAngle) * t2;
+                
+                let topP1, topP2, bottomP1;
+                
+                if (isTopLarger) {
+                    topP1 = getArcPoint(scaledOuterR, angle1);
+                    topP2 = getArcPoint(scaledOuterR, angle2);
+                    bottomP1 = getArcPoint(scaledInnerR, angle1);
+                } else {
+                    topP1 = getArcPoint(scaledInnerR, angle1);
+                    topP2 = getArcPoint(scaledInnerR, angle2);
+                    bottomP1 = getArcPoint(scaledOuterR, angle1);
+                }
+                
+                const sliceWidth = Math.hypot(topP2.x - topP1.x, topP2.y - topP1.y);
+                const sliceHeight = Math.hypot(bottomP1.x - topP1.x, bottomP1.y - topP1.y);
+                const sliceAngle = Math.atan2(topP2.y - topP1.y, topP2.x - topP1.x);
+                
+                const sx = imgWidth - (imgWidth / sliceCount) * (i + 1);
+                const sw = imgWidth / sliceCount;
+                
+                ctx.save();
+                ctx.translate(topP1.x, topP1.y);
+                ctx.rotate(sliceAngle);
+                ctx.scale(1, -1);
+                
+                ctx.drawImage(
+                    currentImage,
+                    sx, 0, sw, imgHeight,
+                    0, -sliceHeight, sliceWidth + 0.8, sliceHeight
+                );
+                ctx.restore();
+            }
+
+            // Show SVG overlay if loaded
+            if (currentSVGData) {
+                svgOverlay.style.display = 'block';
+                console.log('✅ SVG overlay displayed (position: absolute)');
+            }
+            
+            shapeData = {
+                geometry,
+                centerX,
+                centerY,
+                scaledInnerR,
+                scaledOuterR,
+                startAngle,
+                endAngle,
+                mmToPx,
+                isTopLarger
+            };
+            
+            downloadBtn.disabled = false;
+            
+            // Display actual dimensions info
+            console.log('✅ Image bent successfully!');
+            console.log(`📏 Canvas size: ${(canvas.width / mmToPx).toFixed(2)}mm × ${(canvas.height / mmToPx).toFixed(2)}mm`);
+            console.log(`📐 Pixel size: ${canvas.width}px × ${canvas.height}px`);
+        });
+
+        // Download PNG (merges canvas and SVG)
+        downloadBtn.addEventListener('click', () => {
+            if (!canvas) return;
+
+            const topCirc = parseFloat(topCircInput.value);
+            const bottomCirc = parseFloat(bottomCircInput.value);
+            const height = parseFloat(heightInput.value);
+            
+            // Create a temporary canvas to merge both layers
+            const tempCanvas = document.createElement('canvas');
+            tempCanvas.width = canvas.width;
+            tempCanvas.height = canvas.height;
+            const tempCtx = tempCanvas.getContext('2d');
+            
+            // Draw the bent image
+            tempCtx.drawImage(canvas, 0, 0);
+            
+            // Draw the SVG on top if exists
+            if (currentSVGData && svgOverlay.complete) {
+                tempCtx.drawImage(svgOverlay, 0, 0, canvas.width, canvas.height);
+            }
+            
+            tempCanvas.toBlob((blob) => {
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `curved_image_${topCirc}x${bottomCirc}x${height}.png`;
+                a.click();
+                URL.revokeObjectURL(url);
+                console.log('✅ PNG downloaded with SVG overlay!');
+            });
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Curve Creator with PNG Export</title>
+  <style>
+    body {
+      background-color: #111;
+      color: white;
+      font-family: Arial, sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 40px;
+    }
+
+    canvas {
+      background-color: #222;
+      border: 2px solid #444;
+      margin-top: 20px;
+    }
+
+    label {
+      margin-top: 20px;
+    }
+
+    input[type="range"] {
+      width: 300px;
+    }
+
+    .value {
+      font-weight: bold;
+      color: #0f0;
+    }
+
+    .controls {
+      margin-top: 20px;
+      text-align: center;
+    }
+
+    .controls div {
+      margin-bottom: 15px;
+    }
+
+    button {
+      background-color: #4CAF50;
+      color: white;
+      padding: 10px 20px;
+      border: none;
+      cursor: pointer;
+      font-size: 16px;
+      margin-top: 20px;
+    }
+
+    button:hover {
+      background-color: #45a049;
+    }
+  </style>
+</head>
+<body>
+
+  <h2>Curve Shape Creator with PNG Export</h2>
+
+  <div class="controls">
+    <div>
+      <label for="top-width">Top Width: 
+        <span id="top-width-value" class="value">295.91</span> mm
+      </label>
+      <input type="range" id="top-width" min="50" max="500" value="295.91">
+    </div>
+    <div>
+      <label for="bottom-width">Bottom Width: 
+        <span id="bottom-width-value" class="value">245.14</span> mm
+      </label>
+      <input type="range" id="bottom-width" min="50" max="500" value="245.14">
+    </div>
+    <div>
+      <label for="thickness">Thickness (fixed 37 mm): 
+        <span class="value">37</span> mm
+      </label>
+    </div>
+  </div>
+
+  <canvas id="curveCanvas" width="1200" height="1200"></canvas>
+
+  <button id="downloadBtn">Download as PNG</button>
+
+  <script>
+    const MM_TO_PX = 3.78; // 1 mm ≈ 3.78 px at 96 DPI
+    const FIXED_THICKNESS_MM = 37.92; // Fixed thickness value
+
+    const canvas = document.getElementById("curveCanvas");
+    const ctx = canvas.getContext("2d");
+    const topWidthSlider = document.getElementById("top-width");
+    const bottomWidthSlider = document.getElementById("bottom-width");
+    const topWidthValue = document.getElementById("top-width-value");
+    const bottomWidthValue = document.getElementById("bottom-width-value");
+    const downloadBtn = document.getElementById("downloadBtn");
+
+    const centerX = canvas.width / 2;
+    const centerY = canvas.height / 2;
+
+    // Function to draw the curve based on the top and bottom widths
+    function drawCurve(topWidthMM, bottomWidthMM) {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      const outerRadiusMM = topWidthMM / 2; // Outer radius is half of top width
+      const innerRadiusMM = bottomWidthMM / 2; // Inner radius is half of bottom width
+
+      // Safety check: ensure the inner radius is smaller than outer radius
+      if (innerRadiusMM >= outerRadiusMM) {
+        alert("Bottom width must be smaller than the top width.");
+        return;
+      }
+
+      // Convert to pixels
+      const outerRadiusPx = outerRadiusMM * MM_TO_PX;
+      const innerRadiusPx = (outerRadiusMM - FIXED_THICKNESS_MM) * MM_TO_PX;
+
+      // Draw the outer curve
+      ctx.beginPath();
+      ctx.arc(centerX, centerY, outerRadiusPx, 0, Math.PI * 2, false);
+
+      // Draw the inner curve (cutout)
+      ctx.arc(centerX, centerY, innerRadiusPx, 0, Math.PI * 2, true);
+      ctx.fillStyle = "#FF4081";
+      ctx.fill("evenodd");
+
+      // Optional stroke
+      ctx.strokeStyle = "#fff";
+      ctx.lineWidth = 1;
+      ctx.stroke();
+    }
+
+    // Function to update the canvas with current slider values
+    function updateCurve() {
+      const topWidthMM = parseFloat(topWidthSlider.value);
+      const bottomWidthMM = parseFloat(bottomWidthSlider.value);
+
+      topWidthValue.textContent = topWidthMM;
+      bottomWidthValue.textContent = bottomWidthMM;
+
+      drawCurve(topWidthMM, bottomWidthMM);
+    }
+
+    // Event listeners for slider changes
+    topWidthSlider.addEventListener("input", updateCurve);
+    bottomWidthSlider.addEventListener("input", updateCurve);
+
+    // Initial draw
+    updateCurve();
+
+    // Function to download the canvas as a PNG
+    downloadBtn.addEventListener("click", () => {
+      const dataUrl = canvas.toDataURL("image/png");
+      const link = document.createElement("a");
+      link.href = dataUrl;
+      link.download = "donut_curve.png";
+      link.click();
+    });
+
+  </script>
+
+</body>
+</html>

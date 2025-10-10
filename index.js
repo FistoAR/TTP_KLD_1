@@ -391,7 +391,7 @@ function updateInputs() {
   } else if (diagramType === "curveRectangle250") {
     document.getElementById("topWidth").value = 295.91;
     document.getElementById("bottomWidth").value = 245.14;
-    document.getElementById("height").value = 37.92;
+    document.getElementById("height").value = 30;
   } else if (diagramType === "curveRectangle750") {
     document.getElementById("topWidth").value = 300.91;
     document.getElementById("bottomWidth").value = 245.14;
@@ -531,6 +531,46 @@ const unitToPx = {
   m: 3780,
 };
 
+// At the top of your file
+const defaultSVGs = {
+  curveRectangle250: './assets/250_ml.svg',
+  // curveRectangle500: './assets/500ml.svg',
+  // curveRectangle750: './assets/750ml.svg',
+  // curveRectangle1000: './assets/1000ml.svg',
+  // curveRectangle500g_square: './assets/500g_square.svg',
+  // curveRectangle500ml_square: './assets/500ml_square.svg',
+};
+
+// Get reference to the overlay element
+const svgOverlayElement = document.getElementById('svgOverlay');
+
+// If it doesn't exist, create it
+if (!svgOverlayElement) {
+  console.log('⚠️ SVG overlay element not found, creating it dynamically...');
+  svgOverlayElement = document.createElement('img');
+  svgOverlayElement.id = 'svgOverlay';
+  svgOverlayElement.alt = 'SVG Overlay';
+  Object.assign(svgOverlayElement.style, {
+    position: 'fixed',
+    pointerEvents: 'none',
+    display: 'none',
+    zIndex: '9999'
+  });
+  document.body.appendChild(svgOverlayElement);
+  console.log('✅ SVG overlay element created and added to body');
+}
+
+// Load all default SVGs (now it's simply assigning paths)
+function loadAllDefaultSVGs() {
+  Object.keys(defaultSVGs).forEach(shapeType => {
+    const svgPath = defaultSVGs[shapeType];
+    console.log('🔍 Using SVG for:', shapeType, 'from path:', svgPath); // Debug log
+  });
+}
+
+// Call this on page load
+window.addEventListener('DOMContentLoaded', loadAllDefaultSVGs);
+
 function drawKLD() {
   if (!ctx) return;
 
@@ -569,74 +609,7 @@ function drawKLD() {
 
   const offset = 30;
 
-// At the top of your file
-const defaultSVGs = {
-  curveRectangle250: null,
-  // curveRectangle500: null,
-  // curveRectangle750: null,
-  // curveRectangle1000: null,
-  // curveRectangle500g_square: null,
-  // curveRectangle500ml_square: null,
-};
-
-const svgPaths = {
-  curveRectangle250: './assets/250ml.svg',
-  // curveRectangle500: './assets/500ml.svg',
-  // curveRectangle750: './assets/750ml.svg',
-  // curveRectangle1000: './assets/1000ml.svg',
-  // curveRectangle500g_square: './assets/500g_square.svg',
-  // curveRectangle500ml_square: './assets/500ml_square.svg',
-};
-
-// Get reference to the overlay element
-const svgOverlayElement = document.getElementById('svgOverlay');
-
-// If it doesn't exist, create it
-if (!svgOverlayElement) {
-  console.log('⚠️ SVG overlay element not found, creating it dynamically...');
-  svgOverlayElement = document.createElement('img');
-  svgOverlayElement.id = 'svgOverlay';
-  svgOverlayElement.alt = 'SVG Overlay';
-  Object.assign(svgOverlayElement.style, {
-    position: 'fixed',
-    pointerEvents: 'none',
-    display: 'none',
-    zIndex: '9999'
-  });
-  document.body.appendChild(svgOverlayElement);
-  console.log('✅ SVG overlay element created and added to body');
-}
-
-
-// Load all default SVGs
-function loadAllDefaultSVGs() {
-  Object.keys(svgPaths).forEach(shapeType => {
-    const svgPath = svgPaths[shapeType];
-    
-    console.log('🔍 Loading SVG for:', shapeType, 'from path:', svgPath); // Debug log
-    
-    fetch(svgPath)
-      .then(response => {
-        if (!response.ok) throw new Error(`HTTP ${response.status}`);
-        return response.text();
-      })
-      .then(svgText => {
-        const dataUrl = 'data:image/svg+xml;base64,' + btoa(encodeURIComponent(svgText).replace(/%([0-9A-F]{2})/g, function(match, p1) {
-  return String.fromCharCode('0x' + p1);
-}));
-
-        defaultSVGs[shapeType] = dataUrl;
-        console.log(`✅ Default SVG loaded for ${shapeType}`);
-      })
-      .catch(err => console.error(`❌ Error loading SVG for ${shapeType}:`, err));
-  });
-}
-
-
-// Call this on page load
-window.addEventListener('DOMContentLoaded', loadAllDefaultSVGs);
-
-// Your drawing code
+// Your drawing code (remains unchanged)
 if (
   diagramType === "curveRectangle500" ||
   diagramType === "curveRectangle250" ||
@@ -680,6 +653,12 @@ if (
 
   let angleInset = 0 * scale;
   let cornerShift = 0 * scale;
+
+  if(diagramType === "curveRectangle250"){
+  angleInset = -35 * scale; // Keep the original angle for the slant
+  // --- END --- 
+  cornerShift = 0 * scale; // This will shift both top-left, top-right, bottom-left, and bottom-right inward
+  }
 
   const topLeft = {
     x: Math.round(centerX + (scaledMaxWidth - scaledWidth) / 2) + angleInset - cornerShift,
@@ -734,7 +713,7 @@ if (
       const sw = sliceW;
       const t1 = i / sliceCount;
       const t2 = (i + 1) / sliceCount;
-      
+
       const topX1 = topLeft.x + (topRight.x - topLeft.x) * t1;
       const topY1 = quadraticAt(
         topLeft.y,
@@ -818,147 +797,147 @@ if (
   ctx.stroke();
 
   // ✅ SHOW SVG OVERLAY AS HTML ELEMENT (ABSOLUTE POSITIONED)
-const currentSVGUrl = defaultSVGs[diagramType];
+  const currentSVGUrl = defaultSVGs[diagramType];
 
-console.log('🔍 Debug Info:');
-console.log('- diagramType:', diagramType);
-console.log('- svgOverlayElement exists:', !!svgOverlayElement);
-console.log('- currentSVGUrl exists:', !!currentSVGUrl);
-console.log('- currentImage exists:', !!currentImage);
+  console.log('🔍 Debug Info:');
+  console.log('- diagramType:', diagramType);
+  console.log('- svgOverlayElement exists:', !!svgOverlayElement);
+  console.log('- currentSVGUrl exists:', !!currentSVGUrl);
+  console.log('- currentImage exists:', !!currentImage);
 
-if (svgOverlayElement && currentSVGUrl && currentImage) {
-  // Get canvas position
-  const canvasRect = canvas.getBoundingClientRect();
-  
-  // Calculate bounding box of the shape
-  const shapeMinX = Math.min(topLeft.x, bottomLeft.x);
-  const shapeMaxX = Math.max(topRight.x, bottomRight.x);
-  const shapeMinY = topLeft.y - Math.abs(curveOffsetTop);
-  const shapeMaxY = bottomLeft.y + Math.abs(curveOffsetBottom);
-  
-  const shapeWidth = shapeMaxX - shapeMinX;
-  const shapeHeight = shapeMaxY - shapeMinY;
-  
-  // Set all styles at once
-  Object.assign(svgOverlayElement.style, {
-    display: 'block',
-    position: 'fixed',
-    left: (canvasRect.left + shapeMinX) + 'px',
-    top: (canvasRect.top + shapeMinY) + 'px',
-    width: shapeWidth + 'px',
-    height: shapeHeight + 'px',
-    opacity: '0.7',
-    pointerEvents: 'none',
-    zIndex: '9999',
-    border: '3px solid red', // Debug border - REMOVE AFTER TESTING
-    background: 'rgba(255, 255, 0, 0.2)' // Debug background - REMOVE AFTER TESTING
-  });
-  
-  // Set the source
-  svgOverlayElement.src = currentSVGUrl;
-  
-  console.log('✅ SVG overlay positioned:');
-  console.log('  Canvas rect:', canvasRect);
-  console.log('  Shape position:', { x: shapeMinX, y: shapeMinY, width: shapeWidth, height: shapeHeight });
-  console.log('  Final position:', {
-    left: (canvasRect.left + shapeMinX),
-    top: (canvasRect.top + shapeMinY),
-    width: shapeWidth,
-    height: shapeHeight
-  });
-  console.log('  SVG src preview:', currentSVGUrl.substring(0, 100));
-  console.log('  Element computed style:', window.getComputedStyle(svgOverlayElement).display);
-  
-  // Additional check - test if image loads
-  svgOverlayElement.onload = () => {
-    console.log('✅ SVG image loaded successfully!');
-    console.log('  Natural size:', svgOverlayElement.naturalWidth, 'x', svgOverlayElement.naturalHeight);
-  };
-  svgOverlayElement.onerror = (e) => {
-    console.error('❌ SVG image failed to load:', e);
-  };
-  
-} else {
-  if (svgOverlayElement) {
-    svgOverlayElement.style.display = 'none';
-  }
-  console.warn('⚠️ Cannot show SVG overlay:');
-  console.warn('  - svgOverlayElement:', !!svgOverlayElement);
-  console.warn('  - currentSVGUrl:', !!currentSVGUrl);
-  console.warn('  - currentImage:', !!currentImage);
-}
+  if (svgOverlayElement && currentSVGUrl && currentImage) {
+    // Get canvas position
+    const canvasRect = canvas.getBoundingClientRect();
 
-  // --- Dimension Text ---
-  let fontSizeScale;
-  switch (units.toLowerCase()) {
-    case "mm":
-      fontSizeScale = 1.0;
-      break;
-    case "cm":
-      fontSizeScale = 1.2;
-      break;
-    case "inch":
-    case "in":
-      fontSizeScale = 1.5;
-      break;
-    case "ft":
-    case "feet":
-      fontSizeScale = 1.8;
-      break;
-    default:
-      fontSizeScale = 1.0;
+        // Calculate bounding box of the shape
+    const shapeMinX = Math.min(topLeft.x, bottomLeft.x);
+    const shapeMaxX = Math.max(topRight.x, bottomRight.x);
+    const shapeMinY = topLeft.y - Math.abs(curveOffsetTop);
+    const shapeMaxY = bottomLeft.y + Math.abs(curveOffsetBottom);
+
+    const shapeWidth = shapeMaxX - shapeMinX;
+    const shapeHeight = shapeMaxY - shapeMinY;
+
+    // Set all styles at once
+    Object.assign(svgOverlayElement.style, {
+      display: 'block',
+      position: 'fixed',
+      left: (canvasRect.left + shapeMinX) + 'px',
+      top: (canvasRect.top + shapeMinY- 80) + 'px',
+      width: shapeWidth+5 + 'px',
+      height: shapeHeight + 'px',
+      opacity: '1',
+      pointerEvents: 'none',
+      zIndex: '9999',
+    });
+
+    // Set the source of the SVG overlay image
+    svgOverlayElement.src = currentSVGUrl;
+
+    console.log('✅ SVG overlay positioned:');
+    console.log('  Canvas rect:', canvasRect);
+    console.log('  Shape position:', { x: shapeMinX, y: shapeMinY, width: shapeWidth, height: shapeHeight });
+    console.log('  Final position:', {
+      left: (canvasRect.left + shapeMinX),
+      top: (canvasRect.top + shapeMinY),
+      width: shapeWidth,
+      height: shapeHeight
+    });
+    console.log('  SVG src preview:', currentSVGUrl.substring(0, 100));
+    console.log('  Element computed style:', window.getComputedStyle(svgOverlayElement).display);
+
+    // Additional check - test if image loads
+    svgOverlayElement.onload = () => {
+      console.log('✅ SVG image loaded successfully!');
+      console.log('  Natural size:', svgOverlayElement.naturalWidth, 'x', svgOverlayElement.naturalHeight);
+    };
+
+    svgOverlayElement.onerror = (e) => {
+      console.error('❌ SVG image failed to load:', e);
+    };
+
+  } else {
+    if (svgOverlayElement) {
+      svgOverlayElement.style.display = 'none';
+    }
+    console.warn('⚠️ Cannot show SVG overlay:');
+    console.warn('  - svgOverlayElement:', !!svgOverlayElement);
+    console.warn('  - currentSVGUrl:', !!currentSVGUrl);
+    console.warn('  - currentImage:', !!currentImage);
   }
 
-  ctx.font = `${Math.max(12, 20 * scale * fontSizeScale)}px Arial`;
-  ctx.fillStyle = "blue";
-  ctx.strokeStyle = "blue";
-  ctx.lineWidth = Math.max(1, 1 * scale);
-  ctx.textAlign = "center";
-  ctx.textBaseline = "middle";
+  // // --- Dimension Text ---
+  // let fontSizeScale;
+  // switch (units.toLowerCase()) {
+  //   case "mm":
+  //     fontSizeScale = 1.0;
+  //     break;
+  //   case "cm":
+  //     fontSizeScale = 1.2;
+  //     break;
+  //   case "inch":
+  //   case "in":
+  //     fontSizeScale = 1.5;
+  //     break;
+  //   case "ft":
+  //   case "feet":
+  //     fontSizeScale = 1.8;
+  //     break;
+  //   default:
+  //     fontSizeScale = 1.0;
+  // }
 
-  const offset = 30 * scale;
+  // ctx.font = `${Math.max(12, 20 * scale * fontSizeScale)}px Arial`;
+  // ctx.fillStyle = "blue";
+  // ctx.strokeStyle = "blue";
+  // ctx.lineWidth = Math.max(1, 1 * scale);
+  // ctx.textAlign = "center";
+  // ctx.textBaseline = "middle";
 
-  const originalTopLeftX = Math.round(centerX + (scaledMaxWidth - scaledWidth) / 2);
-  const originalTopRightX = Math.round(centerX + (scaledMaxWidth + scaledWidth) / 2);
+  // const offset = 30 * scale;
 
-  const topDimY = topLeft.y - curveOffsetTop * 0.5 - offset;
-  drawArrow(ctx, originalTopLeftX, topDimY, originalTopRightX, topDimY, 8);
-  drawArrow(ctx, originalTopRightX, topDimY, originalTopLeftX, topDimY, 8);
-  ctx.fillText(
-    w.toFixed(2) + " " + units,
-    (originalTopLeftX + originalTopRightX) / 2,
-    topDimY - 12 * scale * fontSizeScale
-  );
+  // const originalTopLeftX = Math.round(centerX + (scaledMaxWidth - scaledWidth) / 2);
+  // const originalTopRightX = Math.round(centerX + (scaledMaxWidth + scaledWidth) / 2);
 
-  const bottomDimY = bottomLeft.y + offset;
-  drawArrow(ctx, bottomLeft.x, bottomDimY, bottomRight.x, bottomDimY, 8);
-  drawArrow(ctx, bottomRight.x, bottomDimY, bottomLeft.x, bottomDimY, 8);
-  ctx.fillText(
-    bottom.toFixed(2) + " " + units,
-    (bottomLeft.x + bottomRight.x) / 2,
-    bottomDimY + 16 * scale * fontSizeScale
-  );
+  // const topDimY = topLeft.y - curveOffsetTop * 0.5 - offset;
+  // drawArrow(ctx, originalTopLeftX, topDimY, originalTopRightX, topDimY, 8);
+  // drawArrow(ctx, originalTopRightX, topDimY, originalTopLeftX, topDimY, 8);
+  // ctx.fillText(
+  //   w.toFixed(2) + " " + units,
+  //   (originalTopLeftX + originalTopRightX) / 2,
+  //   topDimY - 12 * scale * fontSizeScale
+  // );
 
-  const heightDimDist = 40 * scale;
-  const offsetX = heightDimDist * Math.cos(angleRad);
-  const offsetY = heightDimDist * Math.sin(angleRad);
+  // const bottomDimY = bottomLeft.y + offset;
+  // drawArrow(ctx, bottomLeft.x, bottomDimY, bottomRight.x, bottomDimY, 8);
+  // drawArrow(ctx, bottomRight.x, bottomDimY, bottomLeft.x, bottomDimY, 8);
+  // ctx.fillText(
+  //   bottom.toFixed(2) + " " + units,
+  //   (bottomLeft.x + bottomRight.x) / 2,
+  //   bottomDimY + 16 * scale * fontSizeScale
+  // );
 
-  drawArrow(ctx, topRight.x + offsetX, topRight.y - offsetY, bottomRight.x + offsetX, bottomRight.y - offsetY, 8);
-  drawArrow(ctx, bottomRight.x + offsetX, bottomRight.y - offsetY, topRight.x + offsetX, topRight.y - offsetY, 8);
+  // const heightDimDist = 40 * scale;
+  // const offsetX = heightDimDist * Math.cos(angleRad);
+  // const offsetY = heightDimDist * Math.sin(angleRad);
 
-  const textX = (topRight.x + bottomRight.x) / 2 + offsetX;
-  const textY = (topRight.y + bottomRight.y) / 2 - offsetY;
+  // drawArrow(ctx, topRight.x + offsetX, topRight.y - offsetY, bottomRight.x + offsetX, bottomRight.y - offsetY, 8);
+  // drawArrow(ctx, bottomRight.x + offsetX, bottomRight.y - offsetY, topRight.x + offsetX, topRight.y - offsetY, 8);
 
-  ctx.save();
-  ctx.translate(textX, textY);
-  ctx.rotate(-angleRad);
-  ctx.fillText(h.toFixed(2) + " " + units, 0, 6 * scale * fontSizeScale);
-  ctx.restore();
+  // const textX = (topRight.x + bottomRight.x) / 2 + offsetX;
+  // const textY = (topRight.y + bottomRight.y) / 2 - offsetY;
+
+  // ctx.save();
+  // ctx.translate(textX, textY);
+  // ctx.rotate(-angleRad);
+  // ctx.fillText(h.toFixed(2) + " " + units, 0, 6 * scale * fontSizeScale);
+  // ctx.restore();
 
   function quadraticAt(p0, p1, p2, t) {
     return (1 - t) * (1 - t) * p0 + 2 * (1 - t) * t * p1 + t * t * p2;
   }
 }
+
 
 
 
@@ -1567,6 +1546,13 @@ function unitToPixelsForExport(value, unit) {
   }
 }
 
+let curveOffsetBottom;
+let curveOffsetTop;
+let bottomRight;
+let bottomLeft;
+let topRight;
+let topLeft;
+
 function drawKLDForExport() {
   if (!ctx) return;
 
@@ -1606,6 +1592,7 @@ function drawKLDForExport() {
 //   return (1 - t) * (1 - t) * p0 + 2 * (1 - t) * t * p1 + t * t * p2;
 // }
 
+// Ensure that the shape and image are properly scaled, and the SVG overlay is correctly aligned
 if (
   diagramType === "curveRectangle500" ||
   diagramType === "curveRectangle250" ||
@@ -1614,9 +1601,9 @@ if (
   diagramType === "curveRectangle500g_square" ||
   diagramType === "curveRectangle500ml_square"
 ) {
-  w = Number(document.getElementById("topWidth").value); //top circumference
-  h = Number(document.getElementById("height").value); //height
-  bottom = Number(document.getElementById("bottomWidth").value); //bottom circumference
+  w = Number(document.getElementById("topWidth").value);
+  h = Number(document.getElementById("height").value);
+  bottom = Number(document.getElementById("bottomWidth").value);
 
   const wPx = toPx(w);
   const hPx = toPx(h);
@@ -1626,59 +1613,57 @@ if (
   const bottomHalf = bottomPx / 2;
   const widthDiff = bottomHalf - topHalf;
 
-  // Use the original height directly
   const verticalHeight = hPx;
 
   const svgWidth = canvas.clientWidth;
-const svgHeight = canvas.clientHeight;
+  const svgHeight = canvas.clientHeight;
 
-// Margins for dimension text and arrows
-const horizontalMargin = 50;
-const verticalMargin = 100;
-const topMargin = 80; // Additional top margin for the shape
+  const horizontalMargin = 70;
+  const verticalMargin = 100;
+  const topMargin = 120;
 
-// Calculate scale to fit within canvas
-const scaleXFit = (svgWidth - 2 * horizontalMargin) / Math.max(wPx, bottomPx);
-const scaleYFit = (svgHeight - 2 * verticalMargin - topMargin) / verticalHeight;
-scale = Math.min(scaleXFit, scaleYFit);
+  const scaleXFit = (svgWidth - 2 * horizontalMargin) / Math.max(wPx, bottomPx);
+  const scaleYFit = (svgHeight - 2 * verticalMargin - topMargin) / verticalHeight;
+  scale = Math.min(scaleXFit, scaleYFit) * 1.1;
 
-const scaledWidth = wPx * scale;
-const scaledHeight = verticalHeight * scale;
-const scaledBottomWidth = bottomPx * scale;
-const scaledMaxWidth = Math.max(wPx, bottomPx) * scale;
+  const scaledWidth = wPx * scale;
+  const scaledHeight = verticalHeight * scale;
+  const scaledBottomWidth = bottomPx * scale;
+  const scaledMaxWidth = Math.max(wPx, bottomPx) * scale;
 
-// Center horizontally, add top margin vertically
-const centerX = (svgWidth - scaledMaxWidth) / 2;
-const centerY = (svgHeight - scaledHeight) / 2 + topMargin;
-
-
+  const centerX = (svgWidth - scaledMaxWidth) / 2;
+  const centerY = (svgHeight - scaledHeight) / 2 + topMargin;
 
   let angleInset = 0 * scale;
   let cornerShift = 0 * scale;
 
-  // Shifting the corners inward (top-left, top-right, bottom-left, bottom-right)
-  const topLeft = {
+  if(diagramType === "curveRectangle250"){
+  angleInset = -25 * scale; // Keep the original angle for the slant
+  // --- END --- 
+  cornerShift = -25 * scale; // This will shift both top-left, top-right, bottom-left, and bottom-right inward
+  }
+
+   topLeft = {
     x: Math.round(centerX + (scaledMaxWidth - scaledWidth) / 2) + angleInset - cornerShift,
     y: Math.round(centerY),
   };
-  const topRight = {
+   topRight = {
     x: Math.round(centerX + (scaledMaxWidth + scaledWidth) / 2) - angleInset + cornerShift,
     y: Math.round(centerY),
   };
-  const bottomLeft = {
+   bottomLeft = {
     x: Math.round(centerX + (scaledMaxWidth - scaledBottomWidth) / 2) - cornerShift,
     y: Math.round(centerY + scaledHeight),
   };
-  const bottomRight = {
+   bottomRight = {
     x: Math.round(centerX + (scaledMaxWidth + scaledBottomWidth) / 2) + cornerShift,
     y: bottomLeft.y,
   };
 
   const angleRad = Math.atan(widthDiff / verticalHeight);
 
-  // --- Inward adjustment for a sharper curve at both the corners (top and bottom) ---
-  const curveOffsetTop = -Math.tan(angleRad) * toPx(w / 2) * scale;
-  const curveOffsetBottom = Math.tan(angleRad) * toPx(bottom / 2) * scale;
+   curveOffsetTop = -Math.tan(angleRad) * toPx(w / 2) * scale;
+   curveOffsetBottom = Math.tan(angleRad) * toPx(bottom / 2) * scale;
 
   ctx.save();
   ctx.beginPath();
@@ -1711,6 +1696,7 @@ const centerY = (svgHeight - scaledHeight) / 2 + topMargin;
       const sw = sliceW;
       const t1 = i / sliceCount;
       const t2 = (i + 1) / sliceCount;
+
       const topX1 = topLeft.x + (topRight.x - topLeft.x) * t1;
       const topY1 = quadraticAt(
         topLeft.y,
@@ -1793,6 +1779,8 @@ const centerY = (svgHeight - scaledHeight) / 2 + topMargin;
   ctx.strokeStyle = "#222";
   ctx.stroke();
 }
+
+
 
   else if (
     diagramType === "squareWithRadius" ||
@@ -2193,30 +2181,88 @@ const centerY = (svgHeight - scaledHeight) / 2 + topMargin;
 
 // Update the export button to use the new function for PNG export
 document.getElementById("export").addEventListener("click", () => {
-  // 1. Temporarily draw the shape without dimensions
+  // 1. Draw the shape without dimensions
   drawKLDForExport();
 
-  // 2. Export canvas as PNG
-  const imgData = canvas.toDataURL("image/png");
+  const canvas = document.getElementById("kldCanvas");
+  const ctx = canvas.getContext("2d");
+  const svgOverlayElement = document.getElementById("svgOverlay");
 
-  // Get shape type and model label
-  const shapeType = document.getElementById("shapeType").value;
-  const modelLabel = getModelLabel().replace(/\s+/g, '_');
-  
-  // Create filename in format: ShapeType_ModelLabel.png
-  const fileName = `${shapeType.charAt(0).toUpperCase() + shapeType.slice(1).toLowerCase()}_${modelLabel}.png`;
+  // 2. Draw SVG overlay image on canvas for export if available
+  if (svgOverlayElement && svgOverlayElement.src) {
+    const img = new Image();
+    // Get the bounding box to position overlay correctly (from your existing code)
+    const canvasRect = canvas.getBoundingClientRect();
+    // Here calculate overlay bounding box on canvas (example using fixed offsets - replace with your current calculation)
+    // You might want to reuse topLeft, topRight, bottomLeft, bottomRight from your draw function context
+    // For this example, assume shapeBoxX/Y/width/height are known
+    const shapeBoxX = 0;
+const shapeBoxY = 0;
+const shapeBoxWidth = 1600;
+const shapeBoxHeight = 600;
 
-  // Create and trigger download
-  const link = document.createElement("a");
-  link.href = imgData;
-  link.download = fileName;
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
+    img.onload = () => {
+      // Draw overlay with the same scale and position on canvas
+      ctx.drawImage(img, shapeBoxX, shapeBoxY, shapeBoxWidth, shapeBoxHeight);
 
-  // 3. Restore canvas with full drawing including dimensions
-  drawKLD();
+      // 3. Export the combined canvas as PNG
+      const imgData = canvas.toDataURL("image/png");
+
+      // 4. Trigger download
+      const shapeType = document.getElementById("shapeType").value;
+      const modelLabel = getModelLabel().replace(/\s+/g, '_');
+      const fileName = `${shapeType.charAt(0).toUpperCase() + shapeType.slice(1).toLowerCase()}_${modelLabel}.png`;
+
+      const link = document.createElement("a");
+      link.href = imgData;
+      link.download = fileName;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+
+      // 5. Restore the canvas including dimension text
+      drawKLD();
+    };
+
+    img.onerror = () => {
+      console.warn("SVG overlay image failed to load. Exporting canvas without overlay.");
+      // Fallback to export without overlay
+      const imgData = canvas.toDataURL("image/png");
+      const shapeType = document.getElementById("shapeType").value;
+      const modelLabel = getModelLabel().replace(/\s+/g, '_');
+      const fileName = `${shapeType.charAt(0).toUpperCase() + shapeType.slice(1).toLowerCase()}_${modelLabel}.png`;
+
+      const link = document.createElement("a");
+      link.href = imgData;
+      link.download = fileName;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+
+      drawKLD();
+    };
+
+    img.crossOrigin = "anonymous"; // Avoid CORS issues if SVG hosted externally
+    img.src = svgOverlayElement.src;
+
+  } else {
+    // No SVG overlay, fallback export just canvas
+    const imgData = canvas.toDataURL("image/png");
+    const shapeType = document.getElementById("shapeType").value;
+    const modelLabel = getModelLabel().replace(/\s+/g, '_');
+    const fileName = `${shapeType.charAt(0).toUpperCase() + shapeType.slice(1).toLowerCase()}_${modelLabel}.png`;
+
+    const link = document.createElement("a");
+    link.href = imgData;
+    link.download = fileName;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+
+    drawKLD();
+  }
 });
+
 
 window.onload = () => {
   loadStateFromLocalStorage();

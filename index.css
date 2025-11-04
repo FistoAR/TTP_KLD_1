@@ -170,9 +170,3 @@ input[type="file"], input[type="number"], select {
 input[type="file"] {
   position: relative;
 }
-#svgOverlay {
-  position: absolute;
-  pointer-events: none;
-  z-index: 10;
-  mix-blend-mode: normal; /* or 'multiply', 'overlay', etc. */
-}

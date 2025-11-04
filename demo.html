@@ -1,151 +1,508 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <title>Curved Label with auto angle</title>
-  <style>
-    body {
-      font-family: sans-serif;
-      padding: 2rem;
-      margin: 0;
-      box-sizing: border-box;
-    }
-    .controls {
-      display: flex;
-      align-items: center;
-      gap: 1rem;
-      flex-wrap: wrap;
-      margin-bottom: 1rem;
-    }
-    .controls label {
-      white-space: nowrap;
-    }
-    input {
-      width: 120px;
-      padding: 0.3rem;
-    }
-    svg {
-      border: 1px solid #ccc;
-      background: #f8f8f8;
-      display: block;
-      margin: auto;
-    }
-    path {
-      fill: #eee;
-      stroke: #333;
-      stroke-width: 2;
-    }
-    .warning {
-      color: red;
-      margin-top: 0.5rem;
-      font-weight: bold;
-    }
-  </style>
-</head>
-<body>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Bottle Label SVG Warper (Fixed Warp Coverage)</title>
+    <style>
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+          sans-serif;
+        background: #f0f2f5;
+        color: #333;
+        margin: 0;
+        padding: 20px;
+        box-sizing: border-box;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+      }
 
-  <h2>Curved Label Generator (auto angle from top/bottom widths & height)</h2>
+      .controls {
+        display: flex;
+        gap: 10px;
+        align-items: flex-start;
+        margin-bottom: 20px;
+        flex-wrap: wrap;
+      }
 
-  <div class="controls">
-    <label>Inner Radius (mm): <input type="number" id="innerRadiusMm" value="183.19" step="0.01" /></label>
-    <label>Height (mm): <input type="number" id="heightMm" value="37.92" step="0.01" /></label>
-    <label>Top Width (mm): <input type="number" id="topWidthMm" value="295.91" step="0.01" /></label>
-    <label>Bottom Width (mm): <input type="number" id="bottomWidthMm" value="245.14" step="0.01" /></label>
-    <button onclick="draw()">Draw</button>
-  </div>
+      .shape-selector {
+        display: flex;
+        flex-direction: column;
+        gap: 5px;
+      }
 
-  <div id="warning" class="warning"></div>
+      .shape-selector label {
+        font-size: 12px;
+        font-weight: 600;
+        color: #666;
+      }
 
-  <svg id="svg" width="800" height="600" viewBox="0 0 800 600" preserveAspectRatio="xMidYMid meet"></svg>
+      .shape-selector select {
+        padding: 10px 12px;
+        font-size: 14px;
+        border: 2px solid #ddd;
+        border-radius: 8px;
+        background: white;
+        cursor: pointer;
+        height: 58px;
+        min-width: 180px;
+        box-sizing: border-box;
+      }
 
-  <script>
-    const mmToPx = mm => mm / 0.264583;
+      .shape-selector select:hover {
+        border-color: #007aff;
+      }
 
-    function polarToCartesian(cx, cy, r, angleDeg) {
-      const angleRad = (angleDeg - 90) * Math.PI / 180.0;
-      return {
-        x: cx + r * Math.cos(angleRad),
-        y: cy + r * Math.sin(angleRad)
+      .shape-selector select:focus {
+        outline: none;
+        border-color: #007aff;
+        box-shadow: 0 0 0 3px rgba(0, 122, 255, 0.1);
+      }
+
+      .export {
+        padding: 10px 16px;
+        font-size: 16px;
+        font-weight: 600;
+        border: none;
+        border-radius: 8px;
+        cursor: pointer;
+        background-color: #007aff;
+        color: white;
+        height: 58px;
+        margin-top: auto;
+        box-sizing: border-box;
+      }
+      .export:hover {
+        background-color: #0056b3;
+      }
+
+      .export.ai-compatible {
+        background-color: #ff6b35;
+      }
+      .export.ai-compatible:hover {
+        background-color: #e55a2b;
+      }
+
+      .canvas-container {
+        width: 90vw;
+        height: 70vh;
+        max-width: 1200px;
+        background: #fff;
+        border-radius: 8px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+        padding: 10px;
+        box-sizing: border-box;
+      }
+
+      #warpCanvas {
+        width: 100%;
+        height: 100%;
+        display: block;
+      }
+
+      .file-upload-label {
+        display: block;
+        border: 2px dashed #b3b3b3;
+        border-radius: 10px;
+        padding: 15px 25px;
+        cursor: pointer;
+        text-align: center;
+        background: #fafbfc;
+        color: #333;
+        position: relative;
+        transition: border-color 0.2s;
+        user-select: none;
+        box-sizing: border-box;
+        height: 58px;
+        margin-top: auto;
+      }
+      .file-upload-label:hover,
+      .file-upload-label.dragover {
+        border-color: #007aff;
+      }
+      .file-upload-label input[type="file"] {
+        display: none;
+      }
+      .file-upload-label span {
+        color: #007aff;
+        text-decoration: underline;
+        font-weight: 600;
+      }
+      #imgError {
+        display: none;
+        color: red;
+        font-size: 12px;
+        font-weight: 500;
+        text-align: center;
+        position: absolute;
+        left: 0;
+        bottom: -18px;
+        width: 100%;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="controls">
+      <div class="shape-selector">
+        <label for="shapeSelect">Select Bottle Shape:</label>
+        <select id="shapeSelect">
+          <option value="250ml_round">250ml Round</option>
+          <option value="500ml_round_square">500ml Round Square</option>
+        </select>
+      </div>
+
+      <div id="dropArea">
+        <label class="file-upload-label" for="imageUpload">
+          <input type="file" id="imageUpload" accept="image/*" />
+          <small id="uploadText">Drag & drop file or <span>Browse</span></small>
+        </label>
+        <small id="imgError"></small>
+      </div>
+
+      <button class="export" id="exportPngBtn">Export PNG</button>
+      <button class="export ai-compatible" id="exportSvgBtn">
+        Export SVG (AI Ready)
+      </button>
+    </div>
+
+    <div class="canvas-container">
+      <canvas id="warpCanvas"></canvas>
+    </div>
+
+    <script>
+      let currentImage = null;
+      let currentShape = "250ml_round";
+      const EXPORT_SCALE = 4;
+
+      const canvas = document.getElementById("warpCanvas");
+      const ctx = canvas.getContext("2d");
+      const uploadText = document.getElementById("uploadText");
+      const imgError = document.getElementById("imgError");
+      const dropArea = document.getElementById("dropArea");
+      const fileInput = document.getElementById("imageUpload");
+      const exportPngBtn = document.getElementById("exportPngBtn");
+      const exportSvgBtn = document.getElementById("exportSvgBtn");
+      const shapeSelect = document.getElementById("shapeSelect");
+
+      class PathSampler {
+        constructor(pathData) {
+          this.pathNode = document.createElementNS("http://www.w3.org/2000/svg", "path");
+          this.pathNode.setAttribute("d", pathData);
+          this.length = this.pathNode.getTotalLength();
+        }
+        getPointAt(percentage) {
+          return this.pathNode.getPointAtLength(this.length * percentage);
+        }
+      }
+
+      const bottleShapes = {
+        "250ml_round": {
+          name: "250ml Round",
+          width: 837,
+          height: 244,
+          path: "M1.37,162.42L73.32,242.27C283.84,56.41,576.84,75.5,764.01,242.27L835.96,162.42C597.61,-50.29,240.85,-53.15,1.37,162.42Z",
+          topPath: "M 835.96,162.42 C 597.61,-50.29 240.85,-53.15 1.37,162.42",
+          bottomPath: "M 73.32,242.27 C 283.84,56.41 576.84,75.5 764.01,242.27",
+          topIsReversed: true
+        },
+        "500ml_round_square": {
+          name: "500ml Round Square",
+          width: 886.64,
+          height: 296.72,
+          path: "M99.06,295.91c7.22-3.68,14.49-7.33,21.74-10.94,12.31-6.17,24.8-12.07,37.38-17.66l8.32-3.56c6.19-2.59,12.48-5.01,18.81-7.25,6.79-2.39,13.66-4.62,20.55-6.67,11.2-3.29,22.5-6.38,33.82-9.23,17.32-4.36,34.73-8.55,52.14-12.54,13.13-3.03,26.38-5.76,39.64-8.17,10.65-1.91,21.41-3.37,32.18-4.37,11.78-1.02,23.62-1.67,35.44-1.95,14.74-.34,29.53-.51,44.27-.49,14.74-.01,29.53.15,44.27.49,9.56.23,19.14.7,28.68,1.39,8.72.64,17.44,1.59,26.09,2.85,7.55,1.11,15.1,2.41,22.59,3.88,14.87,2.96,29.72,6.21,44.47,9.74,16.79,3.93,33.58,8.09,50.26,12.45l11.22,3.06,9.92,2.87,8.8,2.71c10.34,3.28,20.56,7.03,30.56,11.21,9.38,3.95,18.7,8.14,27.88,12.53,13.21,6.34,26.37,12.87,39.42,19.55,1.4.71,3.09.17,3.81-1.23l94.51-184.07c.72-1.41.16-3.11-1.24-3.82l-12.45-6.29-12.14-5.86-12.54-5.77-13.15-5.78-14.04-5.89-15.25-6.12-16.64-6.41c-16.62-6.28-33.41-12.25-50.26-17.87-14.15-4.7-28.45-9.06-42.81-13.06-17.59-4.88-35.41-9.14-53.32-12.73-26.55-5.22-53.37-9.42-80.24-12.58-18.01-2.19-36.11-4-54.19-5.45l-17.34-1.16-14.62-.7c-10.74-.42-21.52-.6-32.26-.54-10.72-.06-21.47.13-32.18.54l-14.58.7-17.36,1.16-4.33.34-14.71,1.29-18.35,1.87c-25.34,2.71-50.66,6.23-75.78,10.52-29.81,5.17-59.39,12.09-88.41,20.67l-14.1,4.3c-10.3,3.24-20.58,6.65-30.78,10.2l-16.94,6.02c-16.55,5.99-33.03,12.33-49.33,18.98l-14.02,5.88-13.15,5.78-12.54,5.77-12.14,5.86-12.59,6.36c-1.41.72-1.96,2.43-1.24,3.84,31.81,61.1,63.35,122.59,94.42,184.07.71,1.4,2.41,1.96,3.82,1.25Z",
+          topPath: "M 881.89,111.84 l-12.45-6.29 -12.14-5.86 -12.54-5.77 -13.15-5.78 -14.04-5.89 -15.25-6.12 -16.64-6.41 c-16.62-6.28 -33.41-12.25 -50.26-17.87 -14.15-4.7 -28.45-9.06 -42.81-13.06 -17.59-4.88 -35.41-9.14 -53.32-12.73 -26.55-5.22 -53.37-9.42 -80.24-12.58 -18.01-2.19 -36.11-4 -54.19-5.45 l-17.34-1.16 -14.62-0.7 c-10.74-.42 -21.52-.6 -32.26-.54 -10.72-.06 -21.47.13 -32.18.54 l-14.58.7 -17.36,1.16 -4.33.34 -14.71,1.29 -18.35,1.87 c-25.34,2.71 -50.66,6.23 -75.78,10.52 -29.81,5.17 -59.39,12.09 -88.41,20.67 l-14.1,4.3 c-10.3,3.24 -20.58,6.65 -30.78,10.2 l-16.94,6.02 c-16.55,5.99 -33.03,12.33 -49.33,18.98 l-14.02,5.88 -13.15,5.78 -12.54,5.77 -12.14,5.86 -12.59,6.36",
+          bottomPath: "M 99.06,295.91 c7.22-3.68 14.49-7.33 21.74-10.94 12.31-6.17 24.8-12.07 37.38-17.66 l8.32-3.56 c6.19-2.59 12.48-5.01 18.81-7.25 6.79-2.39 13.66-4.62 20.55-6.67 11.2-3.29 22.5-6.38 33.82-9.23 17.32-4.36 34.73-8.55 52.14-12.54 13.13-3.03 26.38-5.76 39.64-8.17 10.65-1.91 21.41-3.37 32.18-4.37 11.78-1.02 23.62-1.67 35.44-1.95 14.74-0.34 29.53-0.51 44.27-0.49 14.74-0.01 29.53,0.15 44.27,0.49 9.56,0.23 19.14,0.7 28.68,1.39 8.72,0.64 17.44,1.59 26.09,2.85 7.55,1.11 15.1,2.41 22.59,3.88 14.87,2.96 29.72,6.21 44.47,9.74 16.79,3.93 33.58,8.09 50.26,12.45 l11.22,3.06 9.92,2.87 8.8,2.71 c10.34,3.28 20.56,7.03 30.56,11.21 9.38,3.95 18.7,8.14 27.88,12.53 13.21,6.34 26.37,12.87 39.42,19.55",
+          topIsReversed: true
+        }
       };
-    }
 
-    function draw() {
-      const warningDiv = document.getElementById('warning');
-      warningDiv.textContent = '';
+      Object.values(bottleShapes).forEach(shape => {
+        shape.topSampler = new PathSampler(shape.topPath);
+        shape.bottomSampler = new PathSampler(shape.bottomPath);
+      });
 
-      const innerRadiusMm = parseFloat(document.getElementById('innerRadiusMm').value);
-      const heightMm = parseFloat(document.getElementById('heightMm').value);
-      const topWidthMm = parseFloat(document.getElementById('topWidthMm').value);
-      const bottomWidthMm = parseFloat(document.getElementById('bottomWidthMm').value);
-
-      if (innerRadiusMm <= 0 || heightMm <= 0 || topWidthMm <= 0 || bottomWidthMm <= 0) {
-        warningDiv.textContent = 'All inputs must be positive numbers.';
-        return;
+      function getCurrentShape() {
+        return bottleShapes[currentShape];
       }
 
-      const outerRadiusMm = innerRadiusMm + heightMm;
-
-      // Check ratio to validate if shape possible
-      const expectedRatio = outerRadiusMm / innerRadiusMm;
-      const inputRatio = topWidthMm / bottomWidthMm;
-
-      // Allow small tolerance
-      const tolerance = 0.02;
-
-      if (Math.abs(expectedRatio - inputRatio) > tolerance) {
-        warningDiv.textContent = 
-          `Warning: The ratio of topWidth/bottomWidth (${inputRatio.toFixed(3)}) ` +
-          `does not match outerRadius/innerRadius (${expectedRatio.toFixed(3)}). ` +
-          `Adjust widths or radii to form a valid shape.`;
+      function resizeCanvas() {
+        const dpr = window.devicePixelRatio || 1;
+        canvas.width = canvas.clientWidth * dpr;
+        canvas.height = canvas.clientHeight * dpr;
+        ctx.setTransform(1,0,0,1,0,0);
+        ctx.scale(dpr, dpr);
+        ctx.imageSmoothingEnabled = true;
+        ctx.imageSmoothingQuality = "high";
       }
 
-      // Compute angle θ from topWidth and outerRadius:
-      // chord length = 2 * r * sin(θ/2) => θ = 2 * arcsin(chord/(2r))
-      if (topWidthMm > 2 * outerRadiusMm) {
-        warningDiv.textContent = 'Top width is too large for the given outer radius.';
-        return;
+      function drawShape(localCtx, targetW, targetH, isExport = false, exportScale = 1, clearBackground = false) {
+        localCtx.imageSmoothingEnabled = true;
+        localCtx.imageSmoothingQuality = "high";
+
+        if (clearBackground) {
+          localCtx.clearRect(0, 0, targetW, targetH);
+        }
+
+        const shape = getCurrentShape();
+        const margin = isExport ? 0 : 20;
+
+        const scaleXFit = (targetW - 2 * margin) / shape.width;
+        const scaleYFit = (targetH - 2 * margin) / shape.height;
+        const baseScale = isExport ? exportScale : Math.min(scaleXFit, scaleYFit);
+        const finalScale = baseScale * (isExport ? 1.0 : 1.02);
+
+        const scaledW = shape.width * finalScale;
+        const scaledH = shape.height * finalScale;
+        const offsetX = (targetW - scaledW) / 2;
+        const offsetY = (targetH - scaledH) / 2;
+
+        const path = new Path2D(shape.path);
+        const transformMatrix = new DOMMatrix();
+        transformMatrix.translateSelf(offsetX, offsetY);
+        transformMatrix.scaleSelf(finalScale, finalScale);
+
+        if (currentImage) {
+          localCtx.save();
+          localCtx.transform(transformMatrix.a, transformMatrix.b, transformMatrix.c, transformMatrix.d, transformMatrix.e, transformMatrix.f);
+          localCtx.clip(path);
+          
+          if (isExport) {
+            localCtx.lineWidth = 2;
+            localCtx.stroke(path);
+          }
+
+          localCtx.setTransform(1, 0, 0, 1, 0, 0);
+          if (!isExport && window.devicePixelRatio) {
+            localCtx.scale(window.devicePixelRatio, window.devicePixelRatio);
+          }
+
+          const sliceCount = isExport ? 4000 : 2000;
+          const imgWidth = currentImage.width;
+          const imgHeight = currentImage.height;
+          const sliceW = imgWidth / sliceCount;
+          const extraPadding = isExport ? 15 : 10;
+
+          for (let i = 0; i < sliceCount; i++) {
+            const t = i / sliceCount;
+            const nextT = (i + 1) / sliceCount;
+
+            const tTop = shape.topIsReversed ? 1 - t : t;
+            const nextTTop = shape.topIsReversed ? 1 - nextT : nextT;
+
+            const topP1 = shape.topSampler.getPointAt(tTop);
+            const topP2 = shape.topSampler.getPointAt(nextTTop);
+            const bottomP1 = shape.bottomSampler.getPointAt(t);
+            const bottomP2 = shape.bottomSampler.getPointAt(nextT);
+
+            const topX1 = topP1.x * finalScale + offsetX;
+            const topY1 = topP1.y * finalScale + offsetY;
+            const topX2 = topP2.x * finalScale + offsetX;
+            const topY2 = topP2.y * finalScale + offsetY;
+            const bottomX1 = bottomP1.x * finalScale + offsetX;
+            const bottomY1 = bottomP1.y * finalScale + offsetY;
+            const bottomX2 = bottomP2.x * finalScale + offsetX;
+            const bottomY2 = bottomP2.y * finalScale + offsetY;
+
+            const sliceAngle = Math.atan2(topY2 - topY1, topX2 - topX1);
+            const leftHeight = Math.hypot(bottomX1 - topX1, bottomY1 - topY1);
+            const rightHeight = Math.hypot(bottomX2 - topX2, bottomY2 - topY2);
+            const maxHeight = Math.max(leftHeight, rightHeight);
+            const sliceWidth = Math.hypot(topX2 - topX1, topY2 - topY1);
+
+            localCtx.save();
+            localCtx.translate(topX1, topY1);
+            localCtx.rotate(sliceAngle);
+            const perspectiveSkew = (rightHeight - leftHeight) / Math.max(sliceWidth, 1);
+            localCtx.transform(1, perspectiveSkew, 0, 1, 0, 0);
+
+            localCtx.drawImage(
+              currentImage,
+              Math.max(0, i * sliceW - extraPadding), 0,
+              sliceW + extraPadding * 2, imgHeight,
+              -extraPadding, -extraPadding,
+              sliceWidth + extraPadding * 2, maxHeight + extraPadding * 2
+            );
+            localCtx.restore();
+          }
+          localCtx.restore();
+        } else {
+          localCtx.save();
+          localCtx.transform(transformMatrix.a, transformMatrix.b, transformMatrix.c, transformMatrix.d, transformMatrix.e, transformMatrix.f);
+          localCtx.fillStyle = "#eee";
+          localCtx.fill(path);
+          localCtx.strokeStyle = "#ed312c";
+          localCtx.lineWidth = (isExport ? 0.75 : 2) / finalScale;
+          localCtx.stroke(path);
+          localCtx.restore();
+        }
       }
 
-      const angleRad = 2 * Math.asin(topWidthMm / (2 * outerRadiusMm));
-      const angleDeg = angleRad * 180 / Math.PI;
+      function mainDraw() {
+        resizeCanvas();
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        drawShape(ctx, canvas.clientWidth, canvas.clientHeight, false, 1);
+      }
 
-      // Convert radii to pixels
-      const innerRadius = mmToPx(innerRadiusMm);
-      const outerRadius = mmToPx(outerRadiusMm);
+      function handleImageUpload(event) {
+        const file = event.target.files[0];
+        imgError.style.display = "none";
+        imgError.innerHTML = "";
 
-      const svg = document.getElementById("svg");
-      svg.innerHTML = "";
+        if (!file) {
+          currentImage = null;
+          mainDraw();
+          uploadText.innerHTML = "Drag & drop file or <span>Browse</span>";
+          return;
+        }
 
-      const width = svg.viewBox.baseVal.width;
-      const height = svg.viewBox.baseVal.height;
-      const cx = width / 2;
-      const cy = height / 2;
+        const reader = new FileReader();
+        reader.onload = function (e) {
+          const img = new Image();
+          img.onload = () => {
+            const fullName = file.name;
+            const dotIndex = fullName.lastIndexOf(".");
+            let name = dotIndex !== -1 ? fullName.substring(0, dotIndex) : fullName;
+            const ext = dotIndex !== -1 ? fullName.substring(dotIndex) : "";
+            if (name.length > 7) name = name.substring(0, 7);
+            uploadText.textContent = `${name}.......${ext}`;
+            currentImage = img;
+            mainDraw();
+          };
+          img.onerror = () => {
+            imgError.style.display = "block";
+            imgError.textContent = "Failed to load image.";
+            currentImage = null;
+            mainDraw();
+          };
+          img.src = e.target.result;
+        };
+        reader.readAsDataURL(file);
+      }
 
-      const startAngle = -angleDeg / 2;
-      const endAngle = angleDeg / 2;
+      function handleShapeChange(event) {
+        currentShape = event.target.value;
+        mainDraw();
+      }
 
-      const startOuter = polarToCartesian(cx, cy, outerRadius, startAngle);
-      const endOuter = polarToCartesian(cx, cy, outerRadius, endAngle);
-      const startInner = polarToCartesian(cx, cy, innerRadius, endAngle);
-      const endInner = polarToCartesian(cx, cy, innerRadius, startAngle);
+      function exportPNG() {
+        if (!currentImage) {
+          alert("Please upload an image first.");
+          return;
+        }
+        const shape = getCurrentShape();
+        const exportWidth = shape.width * EXPORT_SCALE;
+        const exportHeight = shape.height * EXPORT_SCALE;
+        const exportCanvas = document.createElement("canvas");
+        exportCanvas.width = exportWidth;
+        exportCanvas.height = exportHeight;
+        const exportCtx = exportCanvas.getContext("2d", { alpha: true });
+        exportCtx.imageSmoothingEnabled = true;
+        exportCtx.imageSmoothingQuality = "high";
+        drawShape(exportCtx, exportWidth, exportHeight, true, EXPORT_SCALE, true);
+        exportCanvas.toBlob(blob => {
+          const link = document.createElement("a");
+          link.href = URL.createObjectURL(blob);
+          link.download = `${currentShape}_Wrap_HighRes.png`;
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+        }, "image/png", 1.0);
+      }
 
-      const largeArcFlag = angleDeg > 180 ? 1 : 0;
+      function exportSVG() {
+        const shape = getCurrentShape();
+        let svgContent = "";
 
-      const pathData = [
-        `M ${startOuter.x} ${startOuter.y}`,
-        `A ${outerRadius} ${outerRadius} 0 ${largeArcFlag} 1 ${endOuter.x} ${endOuter.y}`,
-        `L ${startInner.x} ${startInner.y}`,
-        `A ${innerRadius} ${innerRadius} 0 ${largeArcFlag} 0 ${endInner.x} ${endInner.y}`,
-        `Z`
-      ].join(" ");
+        if (currentImage) {
+          const exportWidth = shape.width * EXPORT_SCALE;
+          const exportHeight = shape.height * EXPORT_SCALE;
+          const exportCanvas = document.createElement("canvas");
+          exportCanvas.width = exportWidth;
+          exportCanvas.height = exportHeight;
+          const exportCtx = exportCanvas.getContext("2d", { alpha: true });
+          exportCtx.imageSmoothingEnabled = true;
+          exportCtx.imageSmoothingQuality = "high";
+          drawShape(exportCtx, exportWidth, exportHeight, true, EXPORT_SCALE, true);
+          const rasterData = exportCanvas.toDataURL("image/png");
 
-      const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
-      path.setAttribute("d", pathData);
-      svg.appendChild(path);
-    }
+          svgContent = `
+      <image 
+        x="0" y="0" 
+        width="${shape.width}" 
+        height="${shape.height}" 
+        xlink:href="${rasterData}"
+        preserveAspectRatio="none" />
+      <path d="${shape.path}" 
+            fill="none" 
+            stroke="#ed312c" 
+            stroke-width="0.75" 
+            stroke-miterlimit="10" />`;
+        } else {
+          svgContent = `
+      <path d="${shape.path}" 
+            fill="#eeeeee" 
+            stroke="#ed312c" 
+            stroke-width="0.75" 
+            stroke-miterlimit="10" />`;
+        }
 
-    draw();
-  </script>
+        const svg = `<?xml version="1.0" encoding="UTF-8"?>
+<svg version="1.1" 
+     id="Layer_1"
+     xmlns="http://www.w3.org/2000/svg" 
+     xmlns:xlink="http://www.w3.org/1999/xlink"
+     viewBox="0 0 ${shape.width} ${shape.height}"
+     xml:space="preserve">
+${svgContent}
+</svg>`;
 
-</body>
+        const blob = new Blob([svg], { type: "image/svg+xml;charset=utf-8" });
+        const link = document.createElement("a");
+        link.href = URL.createObjectURL(blob);
+        link.download = `${currentShape}_Wrap_AI_Compatible.svg`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      }
+
+      window.addEventListener("resize", mainDraw);
+      fileInput.addEventListener("input", handleImageUpload);
+      exportPngBtn.addEventListener("click", exportPNG);
+      exportSvgBtn.addEventListener("click", exportSVG);
+      shapeSelect.addEventListener("change", handleShapeChange);
+
+      document.addEventListener("keydown", e => {
+        if (e.ctrlKey || e.metaKey) {
+          if (e.key === "p") {
+            e.preventDefault();
+            exportPNG();
+          } else if (e.key === "s") {
+            e.preventDefault();
+            exportSVG();
+          }
+        }
+      });
+
+      dropArea.addEventListener("dragover", e => {
+        e.preventDefault();
+        dropArea.classList.add("dragover");
+      });
+      dropArea.addEventListener("dragleave", e => {
+        e.preventDefault();
+        dropArea.classList.remove("dragover");
+      });
+      dropArea.addEventListener("drop", e => {
+        e.preventDefault();
+        dropArea.classList.remove("dragover");
+        if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+          fileInput.files = e.dataTransfer.files;
+          const event = new Event("input", { bubbles: true });
+          fileInput.dispatchEvent(event);
+        }
+      });
+
+      mainDraw();
+    </script>
+  </body>
 </html>

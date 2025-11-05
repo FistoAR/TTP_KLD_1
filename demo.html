@@ -3,41 +3,56 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Bottle Label SVG Warper (Fixed Warp Coverage)</title>
+    <title>Bottle Label SVG Warper (Top Bar Layout)</title>
     <style>
+      /* --- Global Layout --- */
       body {
         font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
           sans-serif;
         background: #f0f2f5;
         color: #333;
         margin: 0;
-        padding: 20px;
-        box-sizing: border-box;
         display: flex;
         flex-direction: column;
-        align-items: center;
+        height: 100vh;
+        overflow: hidden;
       }
 
-      .controls {
+      /* --- Top Controls Bar --- */
+      .controls-bar {
+        height: 10vh;
+        width: 100%;
+        min-height: 80px;
+        background: #fff;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        z-index: 10;
         display: flex;
-        gap: 10px;
-        align-items: flex-start;
-        margin-bottom: 20px;
+        justify-content: center;
+        align-items: flex-end;
+        gap: 25px;
+        padding: 10px 20px;
+        box-sizing: border-box;
         flex-wrap: wrap;
       }
 
-      .shape-selector {
+      /* Each control group (label + input/button) */
+      .shape-selector,
+      #dropArea {
         display: flex;
         flex-direction: column;
-        gap: 5px;
+        justify-content: flex-end;
+        align-items: flex-start;
       }
 
-      .shape-selector label {
+      /* Labels */
+      .shape-selector label,
+      #dropArea > label {
         font-size: 12px;
         font-weight: 600;
         color: #666;
       }
 
+      /* --- Select Dropdown --- */
       .shape-selector select {
         padding: 10px 12px;
         font-size: 14px;
@@ -45,9 +60,10 @@
         border-radius: 8px;
         background: white;
         cursor: pointer;
-        height: 58px;
+        height: 48px;
         min-width: 180px;
         box-sizing: border-box;
+        transition: all 0.2s ease;
       }
 
       .shape-selector select:hover {
@@ -60,75 +76,46 @@
         box-shadow: 0 0 0 3px rgba(0, 122, 255, 0.1);
       }
 
-      .export {
-        padding: 10px 16px;
-        font-size: 16px;
-        font-weight: 600;
-        border: none;
-        border-radius: 8px;
-        cursor: pointer;
-        background-color: #007aff;
-        color: white;
-        height: 58px;
-        margin-top: auto;
-        box-sizing: border-box;
-      }
-      .export:hover {
-        background-color: #0056b3;
-      }
-
-      .export.ai-compatible {
-        background-color: #ff6b35;
-      }
-      .export.ai-compatible:hover {
-        background-color: #e55a2b;
-      }
-
-      .canvas-container {
-        width: 90vw;
-        height: 70vh;
-        max-width: 1200px;
-        background: #fff;
-        border-radius: 8px;
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
-        padding: 10px;
-        box-sizing: border-box;
-      }
-
-      #warpCanvas {
-        width: 100%;
-        height: 100%;
-        display: block;
+      /* --- Upload Area --- */
+      #dropArea {
+        position: relative;
       }
 
       .file-upload-label {
-        display: block;
+        display: flex;
+        align-items: center;
+        justify-content: center;
         border: 2px dashed #b3b3b3;
-        border-radius: 10px;
-        padding: 15px 25px;
+        border-radius: 8px;
+        padding: 0 20px;
         cursor: pointer;
         text-align: center;
         background: #fafbfc;
         color: #333;
-        position: relative;
         transition: border-color 0.2s;
         user-select: none;
         box-sizing: border-box;
-        height: 58px;
-        margin-top: auto;
+        height: 48px;
+        min-width: 180px;
       }
+
       .file-upload-label:hover,
       .file-upload-label.dragover {
         border-color: #007aff;
       }
+
       .file-upload-label input[type="file"] {
         display: none;
       }
+
       .file-upload-label span {
         color: #007aff;
         text-decoration: underline;
         font-weight: 600;
+        margin-left: 4px;
       }
+
+      /* Upload error text */
       #imgError {
         display: none;
         color: red;
@@ -140,22 +127,81 @@
         bottom: -18px;
         width: 100%;
       }
+
+      /* --- Buttons --- */
+      .export {
+        padding: 0 22px;
+        font-size: 15px;
+        font-weight: 600;
+        border: none;
+        border-radius: 8px;
+        cursor: pointer;
+        background-color: #007aff;
+        color: white;
+        height: 48px;
+        align-self: flex-end;
+        box-sizing: border-box;
+        transition: background-color 0.2s ease;
+      }
+
+      .export:hover {
+        background-color: #0056b3;
+      }
+
+      .export.ai-compatible {
+        background-color: #ff6b35;
+      }
+
+      .export.ai-compatible:hover {
+        background-color: #e55a2b;
+      }
+
+      /* --- Canvas Container --- */
+      .canvas-container {
+        height: 90vh;
+        width: 100%;
+        padding: 20px;
+        box-sizing: border-box;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+      }
+
+      #warpCanvas {
+        width: 100%;
+        height: 100%;
+        display: block;
+        background: #fff;
+        border-radius: 8px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+      }
     </style>
   </head>
   <body>
-    <div class="controls">
+    <div class="controls-bar">
       <div class="shape-selector">
         <label for="shapeSelect">Select Bottle Shape:</label>
         <select id="shapeSelect">
           <option value="250ml_round">250ml Round</option>
           <option value="500ml_round_square">500ml Round Square</option>
+          <option value="500ml_sweet_box">500ml Sweet Box</option>
         </select>
       </div>
 
       <div id="dropArea">
+        <label
+          style="
+            font-size: 12px;
+            font-weight: 600;
+            color: #666;
+            margin-left: 2px;
+            display: block;
+          "
+          >Upload Label:</label
+        >
         <label class="file-upload-label" for="imageUpload">
           <input type="file" id="imageUpload" accept="image/*" />
-          <small id="uploadText">Drag & drop file or <span>Browse</span></small>
+          <small id="uploadText">Drag & drop or <span>Browse</span></small>
         </label>
         <small id="imgError"></small>
       </div>
@@ -187,7 +233,10 @@
 
       class PathSampler {
         constructor(pathData) {
-          this.pathNode = document.createElementNS("http://www.w3.org/2000/svg", "path");
+          this.pathNode = document.createElementNS(
+            "http://www.w3.org/2000/svg",
+            "path"
+          );
           this.pathNode.setAttribute("d", pathData);
           this.length = this.pathNode.getTotalLength();
         }
@@ -203,21 +252,36 @@
           height: 244,
           path: "M1.37,162.42L73.32,242.27C283.84,56.41,576.84,75.5,764.01,242.27L835.96,162.42C597.61,-50.29,240.85,-53.15,1.37,162.42Z",
           topPath: "M 835.96,162.42 C 597.61,-50.29 240.85,-53.15 1.37,162.42",
-          bottomPath: "M 73.32,242.27 C 283.84,56.41 576.84,75.5 764.01,242.27",
-          topIsReversed: true
+          bottomPath:
+            "M 73.32,242.27 C 283.84,56.41 576.84,75.5 764.01,242.27",
+          topIsReversed: true,
+          bottomIsReversed: false,
         },
         "500ml_round_square": {
           name: "500ml Round Square",
-          width: 886.64,
-          height: 296.72,
-          path: "M99.06,295.91c7.22-3.68,14.49-7.33,21.74-10.94,12.31-6.17,24.8-12.07,37.38-17.66l8.32-3.56c6.19-2.59,12.48-5.01,18.81-7.25,6.79-2.39,13.66-4.62,20.55-6.67,11.2-3.29,22.5-6.38,33.82-9.23,17.32-4.36,34.73-8.55,52.14-12.54,13.13-3.03,26.38-5.76,39.64-8.17,10.65-1.91,21.41-3.37,32.18-4.37,11.78-1.02,23.62-1.67,35.44-1.95,14.74-.34,29.53-.51,44.27-.49,14.74-.01,29.53.15,44.27.49,9.56.23,19.14.7,28.68,1.39,8.72.64,17.44,1.59,26.09,2.85,7.55,1.11,15.1,2.41,22.59,3.88,14.87,2.96,29.72,6.21,44.47,9.74,16.79,3.93,33.58,8.09,50.26,12.45l11.22,3.06,9.92,2.87,8.8,2.71c10.34,3.28,20.56,7.03,30.56,11.21,9.38,3.95,18.7,8.14,27.88,12.53,13.21,6.34,26.37,12.87,39.42,19.55,1.4.71,3.09.17,3.81-1.23l94.51-184.07c.72-1.41.16-3.11-1.24-3.82l-12.45-6.29-12.14-5.86-12.54-5.77-13.15-5.78-14.04-5.89-15.25-6.12-16.64-6.41c-16.62-6.28-33.41-12.25-50.26-17.87-14.15-4.7-28.45-9.06-42.81-13.06-17.59-4.88-35.41-9.14-53.32-12.73-26.55-5.22-53.37-9.42-80.24-12.58-18.01-2.19-36.11-4-54.19-5.45l-17.34-1.16-14.62-.7c-10.74-.42-21.52-.6-32.26-.54-10.72-.06-21.47.13-32.18.54l-14.58.7-17.36,1.16-4.33.34-14.71,1.29-18.35,1.87c-25.34,2.71-50.66,6.23-75.78,10.52-29.81,5.17-59.39,12.09-88.41,20.67l-14.1,4.3c-10.3,3.24-20.58,6.65-30.78,10.2l-16.94,6.02c-16.55,5.99-33.03,12.33-49.33,18.98l-14.02,5.88-13.15,5.78-12.54,5.77-12.14,5.86-12.59,6.36c-1.41.72-1.96,2.43-1.24,3.84,31.81,61.1,63.35,122.59,94.42,184.07.71,1.4,2.41,1.96,3.82,1.25Z",
-          topPath: "M 881.89,111.84 l-12.45-6.29 -12.14-5.86 -12.54-5.77 -13.15-5.78 -14.04-5.89 -15.25-6.12 -16.64-6.41 c-16.62-6.28 -33.41-12.25 -50.26-17.87 -14.15-4.7 -28.45-9.06 -42.81-13.06 -17.59-4.88 -35.41-9.14 -53.32-12.73 -26.55-5.22 -53.37-9.42 -80.24-12.58 -18.01-2.19 -36.11-4 -54.19-5.45 l-17.34-1.16 -14.62-0.7 c-10.74-.42 -21.52-.6 -32.26-.54 -10.72-.06 -21.47.13 -32.18.54 l-14.58.7 -17.36,1.16 -4.33.34 -14.71,1.29 -18.35,1.87 c-25.34,2.71 -50.66,6.23 -75.78,10.52 -29.81,5.17 -59.39,12.09 -88.41,20.67 l-14.1,4.3 c-10.3,3.24 -20.58,6.65 -30.78,10.2 l-16.94,6.02 c-16.55,5.99 -33.03,12.33 -49.33,18.98 l-14.02,5.88 -13.15,5.78 -12.54,5.77 -12.14,5.86 -12.59,6.36",
-          bottomPath: "M 99.06,295.91 c7.22-3.68 14.49-7.33 21.74-10.94 12.31-6.17 24.8-12.07 37.38-17.66 l8.32-3.56 c6.19-2.59 12.48-5.01 18.81-7.25 6.79-2.39 13.66-4.62 20.55-6.67 11.2-3.29 22.5-6.38 33.82-9.23 17.32-4.36 34.73-8.55 52.14-12.54 13.13-3.03 26.38-5.76 39.64-8.17 10.65-1.91 21.41-3.37 32.18-4.37 11.78-1.02 23.62-1.67 35.44-1.95 14.74-0.34 29.53-0.51 44.27-0.49 14.74-0.01 29.53,0.15 44.27,0.49 9.56,0.23 19.14,0.7 28.68,1.39 8.72,0.64 17.44,1.59 26.09,2.85 7.55,1.11 15.1,2.41 22.59,3.88 14.87,2.96 29.72,6.21 44.47,9.74 16.79,3.93 33.58,8.09 50.26,12.45 l11.22,3.06 9.92,2.87 8.8,2.71 c10.34,3.28 20.56,7.03 30.56,11.21 9.38,3.95 18.7,8.14 27.88,12.53 13.21,6.34 26.37,12.87 39.42,19.55",
-          topIsReversed: true
-        }
+          width: 888.9,
+          height: 297.78,
+          path: "M100.22,295.91c7.22-3.68,14.49-7.33,21.74-10.94,12.31-6.17,24.8-12.07,37.38-17.66l8.32-3.56c6.19-2.59,12.48-5.01,18.81-7.25,6.79-2.39,13.66-4.62,20.55-6.67,11.2-3.29,22.5-6.38,33.82-9.23,17.32-4.36,34.73-8.55,52.14-12.54,13.13-3.03,26.38-5.76,39.64-8.17,10.65-1.91,21.41-3.37,32.18-4.37,11.78-1.02,23.62-1.67,35.44-1.95,14.74-.34,29.53-.51,44.27-.49,14.74-.01,29.53.15,44.27.49,9.56.23,19.14.7,28.68,1.39,8.72.64,17.44,1.59,26.09,2.85,7.55,1.11,15.1,2.41,22.59,3.88,14.87,2.96,29.72,6.21,44.47,9.74,16.79,3.93,33.58,8.09,50.26,12.45l11.22,3.06,9.92,2.87,8.8,2.71c10.34,3.28,20.56,7.03,30.56,11.21,9.38,3.95,18.7,8.14,27.88,12.53,13.21,6.34,26.37,12.87,39.42,19.55l2.4,1.28,1.41-2.51,94.51-184.07,1.26-2.46-2.5-1.36-12.45-6.29-12.14-5.86-12.54-5.77-13.15-5.78-14.04-5.89-15.25-6.12-16.64-6.41c-16.62-6.28-33.41-12.25-50.26-17.87-14.15-4.7-28.45-9.06-42.81-13.06-17.59-4.88-35.41-9.14-53.32-12.73-26.55-5.22-53.37-9.42-80.24-12.58-18.01-2.19-36.11-4-54.19-5.45l-17.34-1.16-14.62-.7c-10.74-.42-21.52-.6-32.26-.54-10.72-.06-21.47.13-32.18.54l-14.58.7-17.36,1.16-4.33.34-14.71,1.29-18.35,1.87c-25.34,2.71-50.66,6.23-75.78,10.52-29.81,5.17-59.39,12.09-88.41,20.67l-14.1,4.3c-10.3,3.24-20.58,6.65-30.78,10.2l-16.94,6.02c-16.55,5.99-33.03,12.33-49.33,18.98l-14.02,5.88-13.15,5.78-12.54,5.77-12.14,5.86-12.59,6.36-2.54,1.32,1.3,2.52c31.81,61.1,63.35,122.59,94.42,184.07l1.32,2.45,2.5-1.2Z",
+          topPath:
+            "M 881.89,111.84 l-12.45-6.29 -12.14-5.86 -12.54-5.77 -13.15-5.78 -14.04-5.89 -15.25-6.12 -16.64-6.41 c-16.62-6.28 -33.41-12.25 -50.26-17.87 -14.15-4.7 -28.45-9.06 -42.81-13.06 -17.59-4.88 -35.41-9.14 -53.32-12.73 -26.55-5.22 -53.37-9.42 -80.24-12.58 -18.01-2.19 -36.11-4 -54.19-5.45 l-17.34-1.16 -14.62-0.7 c-10.74-.42 -21.52-.6 -32.26-.54 -10.72-.06 -21.47.13 -32.18.54 l-14.58.7 -17.36,1.16 -4.33.34 -14.71,1.29 -18.35,1.87 c-25.34,2.71 -50.66,6.23 -75.78,10.52 -29.81,5.17 -59.39,12.09 -88.41,20.67 l-14.1,4.3 c-10.3,3.24 -20.58,6.65 -30.78,10.2 l-16.94,6.02 c-16.55,5.99 -33.03,12.33 -49.33,18.98 l-14.02,5.88 -13.15,5.78 -12.54,5.77 -12.14,5.86 -12.59,6.36",
+          bottomPath:
+            "M100.22,295.91c7.22-3.68,14.49-7.33,21.74-10.94,12.31-6.17,24.8-12.07,37.38-17.66l8.32-3.56c6.19-2.59,12.48-5.01,18.81-7.25,6.79-2.39,13.66-4.62,20.55-6.67,11.2-3.29,22.5-6.38,33.82-9.23,17.32-4.36,34.73-8.55,52.14-12.54,13.13-3.03,26.38-5.76,39.64-8.17,10.65-1.91,21.41-3.37,32.18-4.37,11.78-1.02,23.62-1.67,35.44-1.95,14.74-.34,29.53-.51,44.27-.49,14.74-.01,29.53.15,44.27.49,9.56.23,19.14.7,28.68,1.39,8.72.64,17.44,1.59,26.09,2.85,7.55,1.11,15.1,2.41,22.59,3.88,14.87,2.96,29.72,6.21,44.47,9.74,16.79,3.93,33.58,8.09,50.26,12.45l11.22,3.06,9.92,2.87,8.8,2.71c10.34,3.28,20.56,7.03,30.56,11.21,9.38,3.95,18.7,8.14,27.88,12.53,13.21,6.34,26.37,12.87,39.42,19.55",
+          topIsReversed: true,
+          bottomIsReversed: false,
+        },
+        "500ml_sweet_box": {
+            name: "500ml Sweet Box",
+            width: 1798.7,
+            height: 215.31,
+            path: "M1758.59,213.74l-356.09-70.07c-3.32-.65-6.69-1.11-10.09-1.33l-505.42-33.33c-2.98-.2-5.98-.23-8.96-.09l-341.4,15.99c-3.4.14-6.8.54-10.15,1.13L31.24,213.68l-4.25.74c-3.77.65-7.4-1.84-8.14-5.64L.63,115.74c-.37-1.87.06-3.83,1.13-5.41,1.1-1.59,2.78-2.64,4.68-2.92l4.14-.68L503.67,19.45c3.83-.68,7.68-1.1,11.57-1.3L890,.6c3.4-.17,6.83-.11,10.23.11l495.47,32.68c3.85.25,7.71.76,11.54,1.5l381.26,75.03,4.05.85c1.96.4,3.63,1.59,4.65,3.29,1.02,1.73,1.28,3.77.71,5.67l-26.79,90c-1.05,3.54-4.68,5.7-8.28,4.9l-4.25-.91Z",
+            topPath: "M.63,115.74c-.37-1.87.06-3.83,1.13-5.41,1.1-1.59,2.78-2.64,4.68-2.92l4.14-.68L503.67,19.45c3.83-.68,7.68-1.1,11.57-1.3L890,.6c3.4-.17,6.83-.11,10.23.11l495.47,32.68c3.85.25,7.71.76,11.54,1.5l381.26,75.03,4.05.85c1.96.4,3.63,1.59,4.65,3.29,1.02,1.73,1.28,3.77.71,5.67",
+            bottomPath: "M1758.59,213.74l-356.09-70.07c-3.32-.65-6.69-1.11-10.09-1.33l-505.42-33.33c-2.98-.2-5.98-.23-8.96-.09l-341.4,15.99c-3.4.14-6.8.54-10.15,1.13L31.24,213.68",
+            topIsReversed: false,
+            bottomIsReversed: true,
+        },
       };
 
-      Object.values(bottleShapes).forEach(shape => {
+      Object.values(bottleShapes).forEach((shape) => {
         shape.topSampler = new PathSampler(shape.topPath);
         shape.bottomSampler = new PathSampler(shape.bottomPath);
       });
@@ -230,118 +294,252 @@
         const dpr = window.devicePixelRatio || 1;
         canvas.width = canvas.clientWidth * dpr;
         canvas.height = canvas.clientHeight * dpr;
-        ctx.setTransform(1,0,0,1,0,0);
+        ctx.setTransform(1, 0, 0, 1, 0, 0);
         ctx.scale(dpr, dpr);
         ctx.imageSmoothingEnabled = true;
         ctx.imageSmoothingQuality = "high";
       }
+      
+      function drawWarp(localCtx, img, shape, offsetX, offsetY, finalScale, isExport, heightAdjust = 1.0) {
+        const sliceCount = isExport ? 4000 : 2000;
+        const imgWidth = img.width;
+        const imgHeight = img.height;
+        const sourceSliceWidth = imgWidth / sliceCount;
 
-      function drawShape(localCtx, targetW, targetH, isExport = false, exportScale = 1, clearBackground = false) {
-        localCtx.imageSmoothingEnabled = true;
-        localCtx.imageSmoothingQuality = "high";
+        const isWideShape = (currentShape === "500ml_round_square" || currentShape === "500ml_sweet_box");
+        const isSweetBox = (currentShape === "500ml_sweet_box");
+        
+        // Enhanced overlap for better edge coverage, especially for Sweet Box
+        let baseOverlap;
+        if (isSweetBox) {
+          baseOverlap = isExport ? 40 : 20; // Much higher base for Sweet Box
+        } else if (isWideShape) {
+          baseOverlap = isExport ? 20 : 10;
+        } else {
+          baseOverlap = isExport ? 8 : 4;
+        }
 
+        // More aggressive extension for Sweet Box
+        const extendAmount = isSweetBox ? (isExport ? 30 : 15) : (isExport ? 10 : 5);
+        const startOffset = -extendAmount;
+        const endOffset = extendAmount;
+
+        for (let i = startOffset; i < sliceCount + endOffset; i++) {
+          const t0 = i / sliceCount;
+          const t1 = (i + 1) / sliceCount;
+
+          // More aggressive extension for Sweet Box edges
+          const edgeExtension = isSweetBox ? 0.03 : 0.01;
+          
+          const tTop0 = shape.topIsReversed ? 1 - t0 : t0;
+          const tTop1 = shape.topIsReversed ? 1 - t1 : t1;
+          const tBot0 = shape.bottomIsReversed ? 1 - t0 : t0;
+          const tBot1 = shape.bottomIsReversed ? 1 - t1 : t1;
+
+          // Allow more extension for Sweet Box
+          const clampedTTop0 = Math.min(Math.max(tTop0, -edgeExtension), 1 + edgeExtension);
+          const clampedTTop1 = Math.min(Math.max(tTop1, -edgeExtension), 1 + edgeExtension);
+          const clampedTBot0 = Math.min(Math.max(tBot0, -edgeExtension), 1 + edgeExtension);
+          const clampedTBot1 = Math.min(Math.max(tBot1, -edgeExtension), 1 + edgeExtension);
+
+          // Skip if completely outside range
+          if ((clampedTTop0 < -0.05 && clampedTTop1 < -0.05) || (clampedTTop0 > 1.05 && clampedTTop1 > 1.05)) continue;
+
+          const pTop1 = shape.topSampler.getPointAt(Math.min(Math.max(clampedTTop0, 0), 1));
+          const pBot1 = shape.bottomSampler.getPointAt(Math.min(Math.max(clampedTBot0, 0), 1));
+          const pTop2 = shape.topSampler.getPointAt(Math.min(Math.max(clampedTTop1, 0), 1));
+          const pBot2 = shape.bottomSampler.getPointAt(Math.min(Math.max(clampedTBot1, 0), 1));
+
+          const top1X = pTop1.x * finalScale + offsetX;
+          const top1Y = pTop1.y * finalScale + offsetY;
+          const bot1X = pBot1.x * finalScale + offsetX;
+          const bot1Y = pBot1.y * finalScale + offsetY;
+          const top2X = pTop2.x * finalScale + offsetX;
+          const top2Y = pTop2.y * finalScale + offsetY;
+          const bot2X = pBot2.x * finalScale + offsetX;
+          const bot2Y = pBot2.y * finalScale + offsetY;
+
+          const midTopX = (top1X + top2X) / 2;
+          const midTopY = (top1Y + top2Y) / 2;
+          const midBotX = (bot1X + bot2X) / 2;
+          const midBotY = (bot1Y + bot2Y) / 2;
+
+          const sliceHeight = Math.hypot(midBotX - midTopX, midBotY - midTopY) * heightAdjust;
+          const sliceAngle = Math.atan2(midBotY - midTopY, midBotX - midTopX) - Math.PI / 2;
+
+          const topWidth = Math.hypot(top2X - top1X, top2Y - top1Y);
+          const botWidth = Math.hypot(bot2X - bot1X, bot2Y - bot1Y);
+          const sliceWidth = Math.max(topWidth, botWidth);
+
+          // Much more aggressive overlap for Sweet Box edges
+          let overlap = baseOverlap;
+          if (isSweetBox) {
+            const normalizedT = Math.min(Math.max(t0, 0), 1);
+            // Very aggressive edge overlap for Sweet Box
+            if (isExport) {
+              if (normalizedT < 0.02 || normalizedT > 0.98) {
+                overlap = 80; // Extreme overlap at the very edges
+              } else if (normalizedT < 0.05 || normalizedT > 0.95) {
+                overlap = 60;
+              } else if (normalizedT < 0.1 || normalizedT > 0.9) {
+                overlap = 40;
+              } else {
+                const edgeFactor = Math.min(normalizedT * 3, (1 - normalizedT) * 3, 1);
+                overlap = baseOverlap + (20 - baseOverlap) * (1 - edgeFactor);
+              }
+            } else {
+              if (normalizedT < 0.05 || normalizedT > 0.95) {
+                overlap = 40;
+              } else if (normalizedT < 0.1 || normalizedT > 0.9) {
+                overlap = 30;
+              } else {
+                overlap = 20;
+              }
+            }
+          } else if (isWideShape) {
+            const normalizedT = Math.min(Math.max(t0, 0), 1);
+            const edgeFactor = Math.min(normalizedT * 5, (1 - normalizedT) * 5, 1);
+            overlap = baseOverlap + (15 - baseOverlap) * (1 - edgeFactor);
+            
+            if (isExport) {
+              if (normalizedT < 0.05 || normalizedT > 0.95) overlap += 25;
+              else if (normalizedT < 0.1 || normalizedT > 0.9) overlap += 15;
+            } else {
+              if (normalizedT < 0.1 || normalizedT > 0.9) overlap += 10;
+            }
+          }
+
+          if (sliceWidth < 0.1) continue;
+
+          localCtx.save();
+          localCtx.translate(midTopX, midTopY);
+          localCtx.rotate(sliceAngle);
+          
+          // More vertical extension for Sweet Box
+          let verticalExtension = 0;
+          if(isSweetBox) {
+            verticalExtension = isExport ? 40 : 20;
+          } else if(isWideShape) {
+            verticalExtension = isExport ? 30 : 15;
+          } else if (currentShape === "250ml_round") {
+            verticalExtension = isExport ? 10 : 0;
+          }
+
+          // Adjust source position to use more of the image for Sweet Box edges
+          let adjustedSourceX = i - startOffset;
+          if (isSweetBox) {
+            // Stretch the image more at the edges for Sweet Box
+            if (t0 < 0) {
+              adjustedSourceX = 0; // Use leftmost part of image
+            } else if (t0 > 1) {
+              adjustedSourceX = sliceCount - 1; // Use rightmost part of image
+            } else {
+              // Slight compression in the middle to allow more content at edges
+              adjustedSourceX = t0 * sliceCount;
+            }
+          }
+          
+          const sourceX = Math.max(0, Math.min(adjustedSourceX * sourceSliceWidth, imgWidth - sourceSliceWidth));
+
+          localCtx.drawImage(
+            img,
+            sourceX, 0,
+            sourceSliceWidth, imgHeight,
+            -(sliceWidth + overlap) / 2, -verticalExtension,
+            sliceWidth + overlap, sliceHeight + (verticalExtension * 2)
+          );
+          localCtx.restore();
+        }
+      }
+      
+      function renderImageContent(localCtx, targetW, targetH, isExport, exportScale, clearBackground) {
         if (clearBackground) {
           localCtx.clearRect(0, 0, targetW, targetH);
         }
-
+        
         const shape = getCurrentShape();
         const margin = isExport ? 0 : 20;
 
         const scaleXFit = (targetW - 2 * margin) / shape.width;
         const scaleYFit = (targetH - 2 * margin) / shape.height;
-        const baseScale = isExport ? exportScale : Math.min(scaleXFit, scaleYFit);
-        const finalScale = baseScale * (isExport ? 1.0 : 1.02);
+        const finalScale = isExport ? exportScale : Math.min(scaleXFit, scaleYFit);
 
         const scaledW = shape.width * finalScale;
         const scaledH = shape.height * finalScale;
         const offsetX = (targetW - scaledW) / 2;
         const offsetY = (targetH - scaledH) / 2;
-
+        
         const path = new Path2D(shape.path);
         const transformMatrix = new DOMMatrix();
         transformMatrix.translateSelf(offsetX, offsetY);
         transformMatrix.scaleSelf(finalScale, finalScale);
-
+        
         if (currentImage) {
           localCtx.save();
-          localCtx.transform(transformMatrix.a, transformMatrix.b, transformMatrix.c, transformMatrix.d, transformMatrix.e, transformMatrix.f);
+          localCtx.transform(
+            transformMatrix.a, transformMatrix.b, transformMatrix.c, 
+            transformMatrix.d, transformMatrix.e, transformMatrix.f
+          );
           localCtx.clip(path);
           
-          if (isExport) {
-            localCtx.lineWidth = 2;
-            localCtx.stroke(path);
-          }
-
           localCtx.setTransform(1, 0, 0, 1, 0, 0);
-          if (!isExport && window.devicePixelRatio) {
-            localCtx.scale(window.devicePixelRatio, window.devicePixelRatio);
+          
+          if (!isExport && window.devicePixelRatio && localCtx === ctx) {
+               localCtx.scale(window.devicePixelRatio, window.devicePixelRatio);
           }
+          
+          const heightAdjust = 1.0;
+          drawWarp(localCtx, currentImage, shape, offsetX, offsetY, finalScale, isExport, heightAdjust);
+          
+          localCtx.restore(); 
 
-          const sliceCount = isExport ? 4000 : 2000;
-          const imgWidth = currentImage.width;
-          const imgHeight = currentImage.height;
-          const sliceW = imgWidth / sliceCount;
-          const extraPadding = isExport ? 15 : 10;
-
-          for (let i = 0; i < sliceCount; i++) {
-            const t = i / sliceCount;
-            const nextT = (i + 1) / sliceCount;
-
-            const tTop = shape.topIsReversed ? 1 - t : t;
-            const nextTTop = shape.topIsReversed ? 1 - nextT : nextT;
-
-            const topP1 = shape.topSampler.getPointAt(tTop);
-            const topP2 = shape.topSampler.getPointAt(nextTTop);
-            const bottomP1 = shape.bottomSampler.getPointAt(t);
-            const bottomP2 = shape.bottomSampler.getPointAt(nextT);
-
-            const topX1 = topP1.x * finalScale + offsetX;
-            const topY1 = topP1.y * finalScale + offsetY;
-            const topX2 = topP2.x * finalScale + offsetX;
-            const topY2 = topP2.y * finalScale + offsetY;
-            const bottomX1 = bottomP1.x * finalScale + offsetX;
-            const bottomY1 = bottomP1.y * finalScale + offsetY;
-            const bottomX2 = bottomP2.x * finalScale + offsetX;
-            const bottomY2 = bottomP2.y * finalScale + offsetY;
-
-            const sliceAngle = Math.atan2(topY2 - topY1, topX2 - topX1);
-            const leftHeight = Math.hypot(bottomX1 - topX1, bottomY1 - topY1);
-            const rightHeight = Math.hypot(bottomX2 - topX2, bottomY2 - topY2);
-            const maxHeight = Math.max(leftHeight, rightHeight);
-            const sliceWidth = Math.hypot(topX2 - topX1, topY2 - topY1);
-
-            localCtx.save();
-            localCtx.translate(topX1, topY1);
-            localCtx.rotate(sliceAngle);
-            const perspectiveSkew = (rightHeight - leftHeight) / Math.max(sliceWidth, 1);
-            localCtx.transform(1, perspectiveSkew, 0, 1, 0, 0);
-
-            localCtx.drawImage(
-              currentImage,
-              Math.max(0, i * sliceW - extraPadding), 0,
-              sliceW + extraPadding * 2, imgHeight,
-              -extraPadding, -extraPadding,
-              sliceWidth + extraPadding * 2, maxHeight + extraPadding * 2
-            );
-            localCtx.restore();
-          }
-          localCtx.restore();
         } else {
           localCtx.save();
-          localCtx.transform(transformMatrix.a, transformMatrix.b, transformMatrix.c, transformMatrix.d, transformMatrix.e, transformMatrix.f);
+          localCtx.transform(
+            transformMatrix.a, transformMatrix.b, transformMatrix.c, 
+            transformMatrix.d, transformMatrix.e, transformMatrix.f
+          );
           localCtx.fillStyle = "#eee";
           localCtx.fill(path);
-          localCtx.strokeStyle = "#ed312c";
-          localCtx.lineWidth = (isExport ? 0.75 : 2) / finalScale;
-          localCtx.stroke(path);
           localCtx.restore();
         }
       }
 
+      function drawShape(localCtx, targetW, targetH, isExport, exportScale, clearBackground) {
+        localCtx.imageSmoothingEnabled = true;
+        localCtx.imageSmoothingQuality = "high";
+
+        renderImageContent(localCtx, targetW, targetH, isExport, exportScale, clearBackground);
+        
+        const shape = getCurrentShape();
+        const margin = isExport ? 0 : 20;
+        const scaleXFit = (targetW - 2 * margin) / shape.width;
+        const scaleYFit = (targetH - 2 * margin) / shape.height;
+        const finalScale = isExport ? exportScale : Math.min(scaleXFit, scaleYFit);
+        const scaledW = shape.width * finalScale;
+        const scaledH = shape.height * finalScale;
+        const offsetX = (targetW - scaledW) / 2;
+        const offsetY = (targetH - scaledH) / 2;
+        
+        const path = new Path2D(shape.path);
+        const transformMatrix = new DOMMatrix();
+        transformMatrix.translateSelf(offsetX, offsetY);
+        transformMatrix.scaleSelf(finalScale, finalScale);
+        
+        localCtx.save();
+        localCtx.transform(
+          transformMatrix.a, transformMatrix.b, transformMatrix.c, 
+          transformMatrix.d, transformMatrix.e, transformMatrix.f
+        );
+        localCtx.strokeStyle = "#ed312c";
+        localCtx.lineWidth = isExport ? 0.75 : (2 / finalScale); 
+        localCtx.stroke(path);
+        localCtx.restore();
+      }
+
       function mainDraw() {
         resizeCanvas();
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-        drawShape(ctx, canvas.clientWidth, canvas.clientHeight, false, 1);
+        drawShape(ctx, canvas.clientWidth, canvas.clientHeight, false, 1, true);
       }
 
       function handleImageUpload(event) {
@@ -352,7 +550,7 @@
         if (!file) {
           currentImage = null;
           mainDraw();
-          uploadText.innerHTML = "Drag & drop file or <span>Browse</span>";
+          uploadText.innerHTML = "Drag & drop or <span>Browse</span>";
           return;
         }
 
@@ -362,7 +560,8 @@
           img.onload = () => {
             const fullName = file.name;
             const dotIndex = fullName.lastIndexOf(".");
-            let name = dotIndex !== -1 ? fullName.substring(0, dotIndex) : fullName;
+            let name =
+              dotIndex !== -1 ? fullName.substring(0, dotIndex) : fullName;
             const ext = dotIndex !== -1 ? fullName.substring(dotIndex) : "";
             if (name.length > 7) name = name.substring(0, 7);
             uploadText.textContent = `${name}.......${ext}`;
@@ -397,17 +596,28 @@
         exportCanvas.width = exportWidth;
         exportCanvas.height = exportHeight;
         const exportCtx = exportCanvas.getContext("2d", { alpha: true });
-        exportCtx.imageSmoothingEnabled = true;
-        exportCtx.imageSmoothingQuality = "high";
-        drawShape(exportCtx, exportWidth, exportHeight, true, EXPORT_SCALE, true);
-        exportCanvas.toBlob(blob => {
-          const link = document.createElement("a");
-          link.href = URL.createObjectURL(blob);
-          link.download = `${currentShape}_Wrap_HighRes.png`;
-          document.body.appendChild(link);
-          link.click();
-          document.body.removeChild(link);
-        }, "image/png", 1.0);
+        
+        drawShape(
+          exportCtx,
+          exportWidth,
+          exportHeight,
+          true,
+          EXPORT_SCALE,
+          true
+        );
+        
+        exportCanvas.toBlob(
+          (blob) => {
+            const link = document.createElement("a");
+            link.href = URL.createObjectURL(blob);
+            link.download = `${currentShape}_Wrap_HighRes.png`;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+          },
+          "image/png",
+          1.0
+        );
       }
 
       function exportSVG() {
@@ -421,30 +631,38 @@
           exportCanvas.width = exportWidth;
           exportCanvas.height = exportHeight;
           const exportCtx = exportCanvas.getContext("2d", { alpha: true });
-          exportCtx.imageSmoothingEnabled = true;
-          exportCtx.imageSmoothingQuality = "high";
-          drawShape(exportCtx, exportWidth, exportHeight, true, EXPORT_SCALE, true);
+          
+          renderImageContent(
+            exportCtx,
+            exportWidth,
+            exportHeight,
+            true,
+            EXPORT_SCALE,
+            true
+          );
+          
           const rasterData = exportCanvas.toDataURL("image/png");
 
           svgContent = `
-      <image 
-        x="0" y="0" 
-        width="${shape.width}" 
-        height="${shape.height}" 
-        xlink:href="${rasterData}"
-        preserveAspectRatio="none" />
-      <path d="${shape.path}" 
-            fill="none" 
-            stroke="#ed312c" 
-            stroke-width="0.75" 
-            stroke-miterlimit="10" />`;
+    <image 
+      x="0" y="0" 
+      width="${shape.width}" 
+      height="${shape.height}" 
+      xlink:href="${rasterData}"
+      preserveAspectRatio="none" />
+    <path d="${shape.path}" 
+          fill="none" 
+          stroke="#ed312c" 
+          stroke-width="0.75" 
+          stroke-miterlimit="10" />`;
+
         } else {
           svgContent = `
-      <path d="${shape.path}" 
-            fill="#eeeeee" 
-            stroke="#ed312c" 
-            stroke-width="0.75" 
-            stroke-miterlimit="10" />`;
+    <path d="${shape.path}" 
+          fill="#eeeeee" 
+          stroke="#ed312c" 
+          stroke-width="0.75" 
+          stroke-miterlimit="10" />`;
         }
 
         const svg = `<?xml version="1.0" encoding="UTF-8"?>
@@ -466,13 +684,14 @@ ${svgContent}
         document.body.removeChild(link);
       }
 
+
       window.addEventListener("resize", mainDraw);
       fileInput.addEventListener("input", handleImageUpload);
       exportPngBtn.addEventListener("click", exportPNG);
       exportSvgBtn.addEventListener("click", exportSVG);
       shapeSelect.addEventListener("change", handleShapeChange);
 
-      document.addEventListener("keydown", e => {
+      document.addEventListener("keydown", (e) => {
         if (e.ctrlKey || e.metaKey) {
           if (e.key === "p") {
             e.preventDefault();
@@ -484,15 +703,15 @@ ${svgContent}
         }
       });
 
-      dropArea.addEventListener("dragover", e => {
+      dropArea.addEventListener("dragover", (e) => {
         e.preventDefault();
         dropArea.classList.add("dragover");
       });
-      dropArea.addEventListener("dragleave", e => {
+      dropArea.addEventListener("dragleave", (e) => {
         e.preventDefault();
         dropArea.classList.remove("dragover");
       });
-      dropArea.addEventListener("drop", e => {
+      dropArea.addEventListener("drop", (e) => {
         e.preventDefault();
         dropArea.classList.remove("dragover");
         if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {

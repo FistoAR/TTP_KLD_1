@@ -3,221 +3,77 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Bottle Label SVG Warper (Top Bar Layout)</title>
+    <title>Bottle Label SVG Warper (Tailwind CSS)</title>
+    <!-- Include Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
     <style>
-      /* --- Global Layout --- */
-      body {
-        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
-          sans-serif;
-        background: #f0f2f5;
-        color: #333;
-        margin: 0;
-        display: flex;
-        flex-direction: column;
-        height: 100vh;
-        overflow: hidden;
-      }
-
-      /* --- Top Controls Bar --- */
-      .controls-bar {
-        height: 10vh;
-        width: 100%;
-        min-height: 80px;
-        background: #fff;
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-        z-index: 10;
-        display: flex;
-        justify-content: center;
-        align-items: flex-end;
-        gap: 25px;
-        padding: 10px 20px;
-        box-sizing: border-box;
-        flex-wrap: wrap;
-      }
-
-      /* Each control group (label + input/button) */
-      .shape-selector,
-      #dropArea {
-        display: flex;
-        flex-direction: column;
-        justify-content: flex-end;
-        align-items: flex-start;
-      }
-
-      /* Labels */
-      .shape-selector label,
-      #dropArea > label {
-        font-size: 12px;
-        font-weight: 600;
-        color: #666;
-      }
-
-      /* --- Select Dropdown --- */
-      .shape-selector select {
-        padding: 10px 12px;
-        font-size: 14px;
-        border: 2px solid #ddd;
-        border-radius: 8px;
-        background: white;
-        cursor: pointer;
-        height: 48px;
-        min-width: 180px;
-        box-sizing: border-box;
-        transition: all 0.2s ease;
-      }
-
-      .shape-selector select:hover {
-        border-color: #007aff;
-      }
-
-      .shape-selector select:focus {
-        outline: none;
-        border-color: #007aff;
-        box-shadow: 0 0 0 3px rgba(0, 122, 255, 0.1);
-      }
-
-      /* --- Upload Area --- */
-      #dropArea {
-        position: relative;
-      }
-
-      .file-upload-label {
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        border: 2px dashed #b3b3b3;
-        border-radius: 8px;
-        padding: 0 20px;
-        cursor: pointer;
-        text-align: center;
-        background: #fafbfc;
-        color: #333;
-        transition: border-color 0.2s;
-        user-select: none;
-        box-sizing: border-box;
-        height: 48px;
-        min-width: 180px;
-      }
-
-      .file-upload-label:hover,
-      .file-upload-label.dragover {
-        border-color: #007aff;
-      }
-
-      .file-upload-label input[type="file"] {
-        display: none;
-      }
-
-      .file-upload-label span {
-        color: #007aff;
-        text-decoration: underline;
-        font-weight: 600;
-        margin-left: 4px;
-      }
-
-      /* Upload error text */
-      #imgError {
-        display: none;
-        color: red;
-        font-size: 12px;
-        font-weight: 500;
-        text-align: center;
-        position: absolute;
-        left: 0;
-        bottom: -18px;
-        width: 100%;
-      }
-
-      /* --- Buttons --- */
-      .export {
-        padding: 0 22px;
-        font-size: 15px;
-        font-weight: 600;
-        border: none;
-        border-radius: 8px;
-        cursor: pointer;
-        background-color: #007aff;
-        color: white;
-        height: 48px;
-        align-self: flex-end;
-        box-sizing: border-box;
-        transition: background-color 0.2s ease;
-      }
-
-      .export:hover {
-        background-color: #0056b3;
-      }
-
-      .export.ai-compatible {
-        background-color: #ff6b35;
-      }
-
-      .export.ai-compatible:hover {
-        background-color: #e55a2b;
-      }
-
-      /* --- Canvas Container --- */
-      .canvas-container {
-        height: 90vh;
-        width: 100%;
-        padding: 20px;
-        box-sizing: border-box;
-        display: flex;
-        justify-content: center;
-        align-items: center;
-      }
-
-      #warpCanvas {
-        width: 100%;
-        height: 100%;
-        display: block;
-        background: #fff;
-        border-radius: 8px;
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+      /* Custom style for the drag-over effect, as Tailwind doesn't have a dragover variant by default */
+      .dragover {
+        border-color: #3b82f6; /* Equivalent to border-blue-500 */
       }
     </style>
   </head>
-  <body>
-    <div class="controls-bar">
-      <div class="shape-selector">
-        <label for="shapeSelect">Select Bottle Shape:</label>
-        <select id="shapeSelect">
-          <option value="250ml_round">250ml Round</option>
-          <option value="500ml_round_square">500ml Round Square</option>
-          <option value="500ml_sweet_box">500ml Sweet Box</option>
-        </select>
-      </div>
+  <body class="bg-slate-100 flex flex-col h-screen overflow-hidden font-sans">
 
-      <div id="dropArea">
-        <label
-          style="
-            font-size: 12px;
-            font-weight: 600;
-            color: #666;
-            margin-left: 2px;
-            display: block;
-          "
-          >Upload Label:</label
-        >
-        <label class="file-upload-label" for="imageUpload">
-          <input type="file" id="imageUpload" accept="image/*" />
-          <small id="uploadText">Drag & drop or <span>Browse</span></small>
-        </label>
-        <small id="imgError"></small>
-      </div>
+    <!-- === TOP CONTROLS BAR === -->
+    <div class="bg-white shadow-md z-10">
+      <div class="container mx-auto p-4 flex justify-center items-end flex-wrap gap-x-6 gap-y-4">
 
-      <button class="export" id="exportPngBtn">Export PNG</button>
-      <button class="export ai-compatible" id="exportSvgBtn">
-        Export SVG (AI Ready)
-      </button>
+        <!-- Shape Type Selector -->
+        <div class="flex flex-col">
+          <label for="shapeTypeSelect" class="text-xs font-semibold text-slate-600 mb-1">Select Shape Type:</label>
+          <select id="shapeTypeSelect" class="h-12 min-w-[180px] px-3 py-2 bg-white border-2 border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-300 focus:border-blue-500 hover:border-blue-500 transition cursor-pointer"></select>
+        </div>
+
+        <!-- Specific Shape Selector -->
+        <div class="flex flex-col">
+          <label for="shapeSelect" class="text-xs font-semibold text-slate-600 mb-1">Select Specific Shape:</label>
+          <select id="shapeSelect" class="h-12 min-w-[180px] px-3 py-2 bg-white border-2 border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-300 focus:border-blue-500 hover:border-blue-500 transition cursor-pointer"></select>
+        </div>
+
+        <!-- Top/Bottom View Selector (for Sweet Box) -->
+        <div id="viewSelector" class="hidden self-end pb-1">
+          <div class="radio-group flex flex-col gap-1">
+            <div>
+              <input type="radio" id="viewTopRadio" name="view_type" value="top" class="cursor-pointer accent-blue-600">
+              <label for="viewTopRadio" class="text-sm ml-2 text-slate-700 cursor-pointer">Top</label>
+            </div>
+            <div>
+              <input type="radio" id="viewBottomRadio" name="view_type" value="bottom" checked class="cursor-pointer accent-blue-600">
+              <label for="viewBottomRadio" class="text-sm ml-2 text-slate-700 cursor-pointer">Bottom</label>
+            </div>
+          </div>
+        </div>
+
+        <!-- File Upload Area -->
+        <div id="dropArea" class="flex flex-col relative">
+          <label for="imageUpload" class="text-xs font-semibold text-slate-600 mb-1">Upload Label:</label>
+          <label class="file-upload-label h-12 min-w-[180px] flex items-center justify-center px-5 bg-slate-50 border-2 border-dashed border-slate-400 rounded-lg cursor-pointer hover:border-blue-500 transition" for="imageUpload">
+            <input type="file" id="imageUpload" class="hidden" accept="image/*" />
+            <small id="uploadText" class="font-medium text-slate-700">Drag & drop or <span class="font-semibold text-blue-600 underline">Browse</span></small>
+          </label>
+          <small id="imgError" class="hidden absolute -bottom-5 left-0 w-full text-center text-xs font-medium text-red-600"></small>
+        </div>
+
+        <!-- Export Buttons -->
+        <button class="export h-12 px-6 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 transition" id="exportPngBtn">Export PNG</button>
+        <button class="export h-12 px-6 bg-orange-500 text-white font-semibold rounded-lg hover:bg-orange-600 transition" id="exportSvgBtn">
+          Export SVG (AI Ready)
+        </button>
+      </div>
     </div>
 
-    <div class="canvas-container">
-      <canvas id="warpCanvas"></canvas>
+    <!-- === CANVAS CONTAINER === -->
+    <div class="flex-grow p-4 md:p-6 flex items-center justify-center">
+      <canvas id="warpCanvas" class="w-full h-full bg-white rounded-lg shadow-sm"></canvas>
     </div>
 
     <script>
+      // The JavaScript logic remains the same, as it primarily manipulates the canvas and data, not the CSS.
+      // Small changes are made to interact with the new class-based UI (e.g., 'hidden' class).
       let currentImage = null;
+      let currentView = 'bottom';
+      let currentShapeType = "round";
       let currentShape = "250ml_round";
       const EXPORT_SCALE = 4;
 
@@ -229,7 +85,10 @@
       const fileInput = document.getElementById("imageUpload");
       const exportPngBtn = document.getElementById("exportPngBtn");
       const exportSvgBtn = document.getElementById("exportSvgBtn");
+      const shapeTypeSelect = document.getElementById("shapeTypeSelect");
       const shapeSelect = document.getElementById("shapeSelect");
+      const viewSelector = document.getElementById("viewSelector");
+
 
       class PathSampler {
         constructor(pathData) {
@@ -245,49 +104,216 @@
         }
       }
 
-      const bottleShapes = {
+      const shapeTypes = {
+        'round': 'Round',
+        'round_square': 'Round Square',
+        'rectangle': 'Rectangle',
+        'sweet_box': 'Sweet Box'
+      };
+
+      const allBottleShapes = {
         "250ml_round": {
+          type: "round",
+          view: "bottom",
           name: "250ml Round",
           width: 837,
           height: 244,
           path: "M1.37,162.42L73.32,242.27C283.84,56.41,576.84,75.5,764.01,242.27L835.96,162.42C597.61,-50.29,240.85,-53.15,1.37,162.42Z",
           topPath: "M 835.96,162.42 C 597.61,-50.29 240.85,-53.15 1.37,162.42",
-          bottomPath:
-            "M 73.32,242.27 C 283.84,56.41 576.84,75.5 764.01,242.27",
+          bottomPath:"M 73.32,242.27 C 283.84,56.41 576.84,75.5 764.01,242.27",
           topIsReversed: true,
           bottomIsReversed: false,
         },
+        "300ml_round": {
+          type: "round",
+          view: "bottom",
+          name: "300ml Round",
+          width: 986.98,
+          height: 332.17,
+          path: "M892.85,294.57c-257.8-94.83-540.94-94.83-798.75,0l-5.32,1.98-45.71-122.15,6.01-2.21c286.86-105.52,601.92-105.52,888.78,0l6.04,2.15-45.75,122.2-5.3-1.98Z",
+          topPath: "M49.08,172.19c286.86-105.52,601.92-105.52,888.78,0",
+          bottomPath: "M892.85,294.57c-257.8-94.83-540.94-94.83-798.75,0",
+          topIsReversed: false,
+          bottomIsReversed: true,
+        },
+        "500ml_round": {
+          type: "round",
+          view: "bottom",
+          name: "500ml Round",
+          width: 945.18,
+          height: 430.84,
+          path: "M846.13,387.86c-120.06-43.77-245.71-65.96-373.55-65.96s-252.55,22.02-372.2,65.47l-.61-1.56L24.95,193.11l2.66-.97c143.01-52.15,292.69-78.58,444.97-78.58s301.97,26.44,444.98,78.59l2.65,1.01-74.09,194.71Z",
+          topPath: "M27.61,192.14c143.01-52.15,292.69-78.58,444.97-78.58s301.97,26.44,444.98,78.59",
+          bottomPath: "M846.13,387.86c-120.06-43.77-245.71-65.96-373.55-65.96s-252.55,22.02-372.2,65.47",
+          topIsReversed: false,
+          bottomIsReversed: true,
+        },
+        "750ml_round": {
+          type: "round",
+          view: "bottom",
+          name: "750ml Round",
+          width: 1187.25,
+          height: 279.7,
+          path: "M3.26,122.79c376.81-163.05,803.93-163.05,1180.74,0l2.6,1.21-1.14,2.55-67.28,150.03-1.21,2.45-2.49-1.01c-332.55-143.26-709.13-143.26-1041.68,0l-2.54,1.04-1.17-2.48L1.8,126.55l-1.14-2.63,2.6-1.13Z",
+          topPath: "M3.26,122.79c376.81-163.05,803.93-163.05,1180.74,0",
+          bottomPath: "M1114.48,278.02c-332.55-143.26-709.13-143.26-1041.68,0",
+          topIsReversed: false,
+          bottomIsReversed: true,
+        },
+        "1000ml_round": {
+            type: "round",
+            view: "bottom",
+            name: "1000ml Round",
+            width: 1186.89,
+            height: 332.33,
+            path: "M97.62,331.03L114.97,323.22L137.59,313.59L160.4,304.43L183.4,295.74L206.58,287.53L229.93,279.8L253.44,272.55L277.1,265.79L300.9,259.51L324.82,253.73L348.86,248.44L373.02,243.64L397.25,239.35L421.59,235.56L446,232.27L470.46,229.48L494.99,227.2L519.56,225.42L544.16,224.15L568.78,223.39L593.42,223.14L618.06,223.39L642.68,224.15L667.28,225.42L691.84,227.2L716.36,229.48L740.84,232.27L765.25,235.56L789.58,239.35L813.82,243.64L837.98,248.44L862.02,253.73L885.93,259.51L909.74,265.79L933.4,272.55L956.9,279.8L980.26,287.53L1003.43,295.74L1026.43,304.43L1049.25,313.59L1071.87,323.22L1089.23,331.04L1091.77,332.1L1092.96,329.66L1185.4,132.99L1186.65,130.47L1184,129.2L1161.31,118.99L1134.45,107.56L1107.36,96.68L1080.05,86.36L1052.53,76.61L1024.8,67.43L996.9,58.83L968.81,50.8L940.56,43.35L912.17,36.48L883.63,30.21L854.97,24.52L826.19,19.42L797.32,14.92L768.35,11.01L739.31,7.71L710.21,5L681.06,2.89L651.87,1.39L622.65,.48L593.42,.18L564.19,.48L534.97,1.39L505.78,2.89L476.63,5L447.52,7.71L418.48,11.01L389.52,14.92L360.64,19.42L331.87,24.52L303.21,30.21L274.67,36.48L246.27,43.35L218.03,50.8L189.94,58.83L162.03,67.43L134.31,76.61L106.79,86.36L79.47,96.68L52.38,107.56L25.53,118.99L2.83,129.21L.24,130.46L1.42,132.99L93.89,329.65L95.16,332.1L97.62,331.03Z",
+            topPath: "M2.83,129.21L25.53,118.99L52.38,107.56L79.47,96.68L106.79,86.36L134.31,76.61L162.03,67.43L189.94,58.83L218.03,50.8L246.27,43.35L274.67,36.48L303.21,30.21L331.87,24.52L360.64,19.42L389.52,14.92L418.48,11.01L447.52,7.71L476.63,5L505.78,2.89L534.97,1.39L564.19,.48L593.42,.18L622.65,.48L651.87,1.39L681.06,2.89L710.21,5L739.31,7.71L768.35,11.01L797.32,14.92L826.19,19.42L854.97,24.52L883.63,30.21L912.17,36.48L940.56,43.35L968.81,50.8L996.9,58.83L1024.8,67.43L1052.53,76.61L1080.05,86.36L1107.36,96.68L1134.45,107.56L1161.31,118.99L1184,129.2",
+            bottomPath: "M97.62,331.03L114.97,323.22L137.59,313.59L160.4,304.43L183.4,295.74L206.58,287.53L229.93,279.8L253.44,272.55L277.1,265.79L300.9,259.51L324.82,253.73L348.86,248.44L373.02,243.64L397.25,239.35L421.59,235.56L446,232.27L470.46,229.48L494.99,227.2L519.56,225.42L544.16,224.15L568.78,223.39L593.42,223.14L618.06,223.39L642.68,224.15L667.28,225.42L691.84,227.2L716.36,229.48L740.84,232.27L765.25,235.56L789.58,239.35L813.82,243.64L837.98,248.44L862.02,253.73L885.93,259.51L909.74,265.79L933.4,272.55L956.9,279.8L980.26,287.53L1003.43,295.74L1026.43,304.43L1049.25,313.59L1071.87,323.22L1089.23,331.04",
+            topIsReversed: false,
+            bottomIsReversed: false,
+        },
+        "450ml_round_square": {
+          type: "round_square",
+          view: "bottom",
+          name: "450ml Round Square",
+          width: 879.22,
+          height: 276.16,
+          path: "M93.16,274.8l9.48-5.52c16.09-9.47,32.49-18.51,49.08-27.07l8.02-3.94c9.34-4.49,18.91-8.56,28.62-12.17,8.99-3.3,18.11-6.37,27.27-9.18,15.76-4.79,31.65-9.33,47.56-13.57,18.8-5.19,37.79-9.92,56.83-14.14l9.07-1.84,8.27-1.5c10.82-1.83,21.76-3.15,32.71-3.94,9.81-.7,19.67-1.17,29.5-1.4,21.39-.46,42.86-.55,64.25-.29,12.27.09,24.57.47,36.82,1.13,13.8.7,27.58,2.2,41.2,4.49,9.2,1.6,18.39,3.47,27.48,5.58,15.63,3.68,31.23,7.65,46.71,11.9,15.9,4.24,31.78,8.78,47.53,13.56,9.16,2.81,18.27,5.88,27.27,9.19,9.71,3.61,19.29,7.68,28.62,12.17,9.02,4.37,17.96,8.98,26.74,13.81,13.78,7.6,26.32,14.75,39.8,22.73l1.29.69.73-1.14,89.79-152.32.72-1.21-1.24-.73-13.45-7.78-11.35-6.29-11.74-6.21-12.33-6.23c-19.27-9.43-38.9-18.29-58.72-26.51l-16-6.53-15.31-5.99-14.52-5.41-13.83-4.89c-23.21-8.03-46.9-14.84-70.84-20.34-19.14-4.36-38.5-8.07-57.9-11.09-11.43-1.81-22.92-3.44-34.4-4.91l-19.63-2.35c-18.16-2.05-36.45-3.52-54.71-4.39-9.72-.44-19.47-.67-29.2-.68h-3.78s-3.78,0-3.78,0l-6.4.04-12.28.25-10.51.39-15.42.86c-13.11.89-26.23,2.07-39.29,3.53l-19.63,2.35c-24.07,3.03-48.1,6.91-71.9,11.61-30.91,6.14-61.46,14.42-91.24,24.74l-13.82,4.89-14.52,5.41-15.31,5.99-16,6.53c-19.82,8.21-39.45,17.07-58.72,26.51l-12.33,6.22-11.74,6.21-11.35,6.29-13.43,7.79-1.22.71.71,1.24,89.83,152.25.7,1.19,1.24-.69Z",
+          topPath: "M1.22,123.55l13.43-7.79l11.35-6.29l11.74-6.21l12.33-6.22c19.27-9.44,38.9-18.3,58.72-26.51l16-6.53l15.31-5.99l14.52-5.41l13.82-4.89c30.78-10.32,60.33-18.6,91.24-24.74c24.07-4.7,47.83-8.58,71.9-11.61l19.63-2.35c13.06-1.46,26.18-2.64,39.29-3.53l15.42-.86l10.51-.39l12.28-.25l6.4-.04h3.78s3.78,0,3.78,0c9.73.01,19.48.24,29.2.68c18.26.87,36.55,2.34,54.71,4.39l19.63,2.35c11.48,1.47,22.97,3.1,34.4,4.91c19.4,3.02,38.76,6.73,57.9,11.09c23.94,5.5,47.63,12.31,70.84,20.34l13.83,4.89l14.52,5.41l15.31,5.99l16,6.53c19.82,8.22,39.45,17.08,58.72,26.51l12.33,6.23l11.74,6.21l11.35,6.29l13.45,7.78",
+          bottomPath: "M93.16,274.8l9.48-5.52c16.09-9.47,32.49-18.51,49.08-27.07l8.02-3.94c9.34-4.49,18.91-8.56,28.62-12.17,8.99-3.3,18.11-6.37,27.27-9.18,15.76-4.79,31.65-9.33,47.56-13.57,18.8-5.19,37.79-9.92,56.83-14.14l9.07-1.84,8.27-1.5c10.82-1.83,21.76-3.15,32.71-3.94,9.81-.7,19.67-1.17,29.5-1.4,21.39-.46,42.86-.55,64.25-.29,12.27.09,24.57.47,36.82,1.13,13.8.7,27.58,2.2,41.2,4.49,9.2,1.6,18.39,3.47,27.48,5.58,15.63,3.68,31.23,7.65,46.71,11.9,15.9,4.24,31.78,8.78,47.53,13.56,9.16,2.81,18.27,5.88,27.27,9.19,9.71,3.61,19.29,7.68,28.62,12.17,9.02,4.37,17.96,8.98,26.74,13.81,13.78,7.6,26.32,14.75,39.8,22.73",
+          topIsReversed: false,
+          bottomIsReversed: false,
+        },
         "500ml_round_square": {
+          type: "round_square",
+          view: "bottom",
           name: "500ml Round Square",
           width: 888.9,
           height: 297.78,
           path: "M100.22,295.91c7.22-3.68,14.49-7.33,21.74-10.94,12.31-6.17,24.8-12.07,37.38-17.66l8.32-3.56c6.19-2.59,12.48-5.01,18.81-7.25,6.79-2.39,13.66-4.62,20.55-6.67,11.2-3.29,22.5-6.38,33.82-9.23,17.32-4.36,34.73-8.55,52.14-12.54,13.13-3.03,26.38-5.76,39.64-8.17,10.65-1.91,21.41-3.37,32.18-4.37,11.78-1.02,23.62-1.67,35.44-1.95,14.74-.34,29.53-.51,44.27-.49,14.74-.01,29.53.15,44.27.49,9.56.23,19.14.7,28.68,1.39,8.72.64,17.44,1.59,26.09,2.85,7.55,1.11,15.1,2.41,22.59,3.88,14.87,2.96,29.72,6.21,44.47,9.74,16.79,3.93,33.58,8.09,50.26,12.45l11.22,3.06,9.92,2.87,8.8,2.71c10.34,3.28,20.56,7.03,30.56,11.21,9.38,3.95,18.7,8.14,27.88,12.53,13.21,6.34,26.37,12.87,39.42,19.55l2.4,1.28,1.41-2.51,94.51-184.07,1.26-2.46-2.5-1.36-12.45-6.29-12.14-5.86-12.54-5.77-13.15-5.78-14.04-5.89-15.25-6.12-16.64-6.41c-16.62-6.28-33.41-12.25-50.26-17.87-14.15-4.7-28.45-9.06-42.81-13.06-17.59-4.88-35.41-9.14-53.32-12.73-26.55-5.22-53.37-9.42-80.24-12.58-18.01-2.19-36.11-4-54.19-5.45l-17.34-1.16-14.62-.7c-10.74-.42-21.52-.6-32.26-.54-10.72-.06-21.47.13-32.18.54l-14.58.7-17.36,1.16-4.33.34-14.71,1.29-18.35,1.87c-25.34,2.71-50.66,6.23-75.78,10.52-29.81,5.17-59.39,12.09-88.41,20.67l-14.1,4.3c-10.3,3.24-20.58,6.65-30.78,10.2l-16.94,6.02c-16.55,5.99-33.03,12.33-49.33,18.98l-14.02,5.88-13.15,5.78-12.54,5.77-12.14,5.86-12.59,6.36-2.54,1.32,1.3,2.52c31.81,61.1,63.35,122.59,94.42,184.07l1.32,2.45,2.5-1.2Z",
-          topPath:
-            "M 881.89,111.84 l-12.45-6.29 -12.14-5.86 -12.54-5.77 -13.15-5.78 -14.04-5.89 -15.25-6.12 -16.64-6.41 c-16.62-6.28 -33.41-12.25 -50.26-17.87 -14.15-4.7 -28.45-9.06 -42.81-13.06 -17.59-4.88 -35.41-9.14 -53.32-12.73 -26.55-5.22 -53.37-9.42 -80.24-12.58 -18.01-2.19 -36.11-4 -54.19-5.45 l-17.34-1.16 -14.62-0.7 c-10.74-.42 -21.52-.6 -32.26-.54 -10.72-.06 -21.47.13 -32.18.54 l-14.58.7 -17.36,1.16 -4.33.34 -14.71,1.29 -18.35,1.87 c-25.34,2.71 -50.66,6.23 -75.78,10.52 -29.81,5.17 -59.39,12.09 -88.41,20.67 l-14.1,4.3 c-10.3,3.24 -20.58,6.65 -30.78,10.2 l-16.94,6.02 c-16.55,5.99 -33.03,12.33 -49.33,18.98 l-14.02,5.88 -13.15,5.78 -12.54,5.77 -12.14,5.86 -12.59,6.36",
-          bottomPath:
-            "M100.22,295.91c7.22-3.68,14.49-7.33,21.74-10.94,12.31-6.17,24.8-12.07,37.38-17.66l8.32-3.56c6.19-2.59,12.48-5.01,18.81-7.25,6.79-2.39,13.66-4.62,20.55-6.67,11.2-3.29,22.5-6.38,33.82-9.23,17.32-4.36,34.73-8.55,52.14-12.54,13.13-3.03,26.38-5.76,39.64-8.17,10.65-1.91,21.41-3.37,32.18-4.37,11.78-1.02,23.62-1.67,35.44-1.95,14.74-.34,29.53-.51,44.27-.49,14.74-.01,29.53.15,44.27.49,9.56.23,19.14.7,28.68,1.39,8.72.64,17.44,1.59,26.09,2.85,7.55,1.11,15.1,2.41,22.59,3.88,14.87,2.96,29.72,6.21,44.47,9.74,16.79,3.93,33.58,8.09,50.26,12.45l11.22,3.06,9.92,2.87,8.8,2.71c10.34,3.28,20.56,7.03,30.56,11.21,9.38,3.95,18.7,8.14,27.88,12.53,13.21,6.34,26.37,12.87,39.42,19.55",
+          topPath:"M 881.89,111.84 l-12.45-6.29 -12.14-5.86 -12.54-5.77 -13.15-5.78 -14.04-5.89 -15.25-6.12 -16.64-6.41 c-16.62-6.28 -33.41-12.25 -50.26-17.87 -14.15-4.7 -28.45-9.06 -42.81-13.06 -17.59-4.88 -35.41-9.14 -53.32-12.73 -26.55-5.22 -53.37-9.42 -80.24-12.58 -18.01-2.19 -36.11-4 -54.19-5.45 l-17.34-1.16 -14.62-0.7 c-10.74-.42 -21.52-.6 -32.26-.54 -10.72-.06 -21.47.13 -32.18.54 l-14.58.7 -17.36,1.16 -4.33.34 -14.71,1.29 -18.35,1.87 c-25.34,2.71 -50.66,6.23 -75.78,10.52 -29.81,5.17 -59.39,12.09 -88.41,20.67 l-14.1,4.3 c-10.3,3.24 -20.58,6.65 -30.78,10.2 l-16.94,6.02 c-16.55,5.99 -33.03,12.33 -49.33,18.98 l-14.02,5.88 -13.15,5.78 -12.54,5.77 -12.14,5.86 -12.59,6.36",
+          bottomPath: "M100.22,295.91c7.22-3.68,14.49-7.33,21.74-10.94,12.31-6.17,24.8-12.07,37.38-17.66l8.32-3.56c6.19-2.59,12.48-5.01,18.81-7.25,6.79-2.39,13.66-4.62,20.55-6.67,11.2-3.29,22.5-6.38,33.82-9.23,17.32-4.36,34.73-8.55,52.14-12.54,13.13-3.03,26.38-5.76,39.64-8.17,10.65-1.91,21.41-3.37,32.18-4.37,11.78-1.02,23.62-1.67,35.44-1.95,14.74-.34,29.53-.51,44.27-.49,14.74-.01,29.53.15,44.27.49,9.56.23,19.14.7,28.68,1.39,8.72.64,17.44,1.59,26.09,2.85,7.55,1.11,15.1,2.41,22.59,3.88,14.87,2.96,29.72,6.21,44.47,9.74,16.79,3.93,33.58,8.09,50.26,12.45l11.22,3.06,9.92,2.87,8.8,2.71c10.34,3.28,20.56,7.03,30.56,11.21,9.38,3.95,18.7,8.14,27.88,12.53,13.21,6.34,26.37,12.87,39.42,19.55",
           topIsReversed: true,
           bottomIsReversed: false,
         },
-        "500ml_sweet_box": {
-            name: "500ml Sweet Box",
-            width: 1798.7,
-            height: 215.31,
-            path: "M1758.59,213.74l-356.09-70.07c-3.32-.65-6.69-1.11-10.09-1.33l-505.42-33.33c-2.98-.2-5.98-.23-8.96-.09l-341.4,15.99c-3.4.14-6.8.54-10.15,1.13L31.24,213.68l-4.25.74c-3.77.65-7.4-1.84-8.14-5.64L.63,115.74c-.37-1.87.06-3.83,1.13-5.41,1.1-1.59,2.78-2.64,4.68-2.92l4.14-.68L503.67,19.45c3.83-.68,7.68-1.1,11.57-1.3L890,.6c3.4-.17,6.83-.11,10.23.11l495.47,32.68c3.85.25,7.71.76,11.54,1.5l381.26,75.03,4.05.85c1.96.4,3.63,1.59,4.65,3.29,1.02,1.73,1.28,3.77.71,5.67l-26.79,90c-1.05,3.54-4.68,5.7-8.28,4.9l-4.25-.91Z",
-            topPath: "M.63,115.74c-.37-1.87.06-3.83,1.13-5.41,1.1-1.59,2.78-2.64,4.68-2.92l4.14-.68L503.67,19.45c3.83-.68,7.68-1.1,11.57-1.3L890,.6c3.4-.17,6.83-.11,10.23.11l495.47,32.68c3.85.25,7.71.76,11.54,1.5l381.26,75.03,4.05.85c1.96.4,3.63,1.59,4.65,3.29,1.02,1.73,1.28,3.77.71,5.67",
-            bottomPath: "M1758.59,213.74l-356.09-70.07c-3.32-.65-6.69-1.11-10.09-1.33l-505.42-33.33c-2.98-.2-5.98-.23-8.96-.09l-341.4,15.99c-3.4.14-6.8.54-10.15,1.13L31.24,213.68",
+        "750ml_rectangle": {
+            type: "rectangle",
+            view: "bottom",
+            name: "750ml Rectangle",
+            width: 462.62,
+            height: 309.76,
+            path: "M.99,47.31 C.99,21.73 21.73,.99 47.31,.99 H 415.31 C 440.89,.99 461.63,21.73 461.63,47.31 V 262.45 C 461.63,288.03 440.89,308.77 415.31,308.77 H 47.31 C 21.73,308.77 .99,288.03 .99,262.45 Z",
+            topPath: "M.99,47.31 C.99,21.73 21.73,.99 47.31,.99 H 415.31 C 440.89,.99 461.63,21.73 461.63,47.31",
+            bottomPath: "M.99,262.45 C.99,288.03 21.73,308.77 47.31,308.77 H 415.31 C 440.89,308.77 461.63,288.03 461.63,262.45",
             topIsReversed: false,
-            bottomIsReversed: true,
+            bottomIsReversed: false,
+        },
+        // --- SWEET BOX SHAPES ---
+        "250ml_sweet_box_top": {
+            type: "sweet_box",
+            view: "top",
+            name: "250ml Sweet Box",
+            width: 361,
+            height: 273.49,
+            path: "M9.29.5h342.4c4.85,0,8.82,3.94,8.82,8.79v254.92c0,4.82-3.97,8.79-8.82,8.79H9.29c-4.85,0-8.79-3.97-8.79-8.79V9.29C.5,4.44,4.44.5,9.29.5Z",
+            topPath: "M0,0 H361",
+            bottomPath: "M0,273.49 H361",
+            topIsReversed: false,
+            bottomIsReversed: false,
+        },
+        "500ml_sweet_box_top": {
+            type: "sweet_box",
+            view: "top",
+            name: "500ml Sweet Box",
+            width: 495.82,
+            height: 351.4,
+            path: "M489.44,351.01H6.42c-3.32,0-6.04-2.72-6.04-6.04V6.38C.38,3.1,3.09.38,6.42.38h483.02c3.29,0,6.01,2.72,6.01,6.01v338.6c0,3.32-2.72,6.04-6.01,6.04h0Z",
+            topPath: "M0,0 H495.82",
+            bottomPath: "M0,351.4 H495.82",
+            topIsReversed: false,
+            bottomIsReversed: false,
+        },
+        "250ml_sweet_box_bottom": {
+          type: "sweet_box",
+          view: "bottom",
+          name: "250ml Sweet Box",
+          width: 1342.58,
+          height: 189.54,
+          path: "M662.63.55l-278.9,13.66c-.26,0-.48.03-.74.09L8.88,81.16l-8.31,1.59,1.42,8.27,15.85,89.69,1.64,8.25,8.26-1.36,367.77-65.74c1.19-.23,2.41-.37,3.6-.43l259.43-12.7c1.3-.06,2.64-.03,3.94.09h.11l365.58,24.6c1.84.14,3.69.45,5.44.93.14.03.26.06.37.09l266.12,52.89,7.12,1.34,2.57-6.92,29.28-86.34,2.87-8.88-9.25-2.2-289.39-57.68c-2.38-.62-4.82-1.02-7.28-1.19L668.08.66c-1.16-.11-2.33-.16-3.49-.16-.65,0-1.3.02-1.95.05",
+          topPath: "M8.88,81.16 L382.99,14.3 c.26-.06 .48-.09 .74-.09 L662.63,0.55 c.65-.03 1.3-.05 1.95-.05 c1.16,0 2.33.05 3.49.16 L1042.28,24.34 c2.46.17 4.9.57 7.28,1.19 l289.39,57.68",
+          bottomPath: "M27.74, 187.6 l367.77-65.74 c1.19-.23,2.41-.37,3.6-.43 l259.43-12.7 c1.3-.06,2.64-.03,3.94.09 h.11 l365.58,24.6 c1.84.14,3.69.45,5.44.93 .14.03 .26.06 .37.09 l266.12,52.89",
+          topIsReversed: false,
+          bottomIsReversed: false,
+        },
+        "500ml_sweet_box_bottom": {
+          type: "sweet_box",
+          view: "bottom",
+          name: "500ml Sweet Box",
+          width: 1798.7,
+          height: 215.31,
+          path: "M1758.59,213.74l-356.09-70.07c-3.32-.65-6.69-1.11-10.09-1.33l-505.42-33.33c-2.98-.2-5.98-.23-8.96-.09l-341.4,15.99c-3.4.14-6.8.54-10.15,1.13L31.24,213.68l-4.25.74c-3.77.65-7.4-1.84-8.14-5.64L.63,115.74c-.37-1.87.06-3.83,1.13-5.41,1.1-1.59,2.78-2.64,4.68-2.92l4.14-.68L503.67,19.45c3.83-.68,7.68-1.1,11.57-1.3L890,.6c3.4-.17,6.83-.11,10.23.11l495.47,32.68c3.85.25,7.71.76,11.54,1.5l381.26,75.03,4.05.85c1.96.4,3.63,1.59,4.65,3.29,1.02,1.73,1.28,3.77.71,5.67l-26.79,90c-1.05,3.54-4.68,5.7-8.28,4.9l-4.25-.91Z",
+          topPath:"M.63,115.74c-.37-1.87.06-3.83,1.13-5.41,1.1-1.59,2.78-2.64,4.68-2.92l4.14-.68L503.67,19.45c3.83-.68,7.68-1.1,11.57-1.3L890,.6c3.4-.17,6.83-.11,10.23.11l495.47,32.68c3.85.25,7.71.76,11.54,1.5l381.26,75.03,4.05.85c1.96.4,3.63,1.59,4.65,3.29,1.02,1.73,1.28,3.77.71,5.67",
+          bottomPath:"M1758.59,213.74l-356.09-70.07c-3.32-.65-6.69-1.11-10.09-1.33l-505.42-33.33c-2.98-.2-5.98-.23-8.96-.09l-341.4,15.99c-3.4.14-6.8.54-10.15,1.13L31.24,213.68",
+          topIsReversed: false,
+          bottomIsReversed: true,
         },
       };
 
-      Object.values(bottleShapes).forEach((shape) => {
+      Object.values(allBottleShapes).forEach((shape) => {
         shape.topSampler = new PathSampler(shape.topPath);
         shape.bottomSampler = new PathSampler(shape.bottomPath);
       });
 
       function getCurrentShape() {
-        return bottleShapes[currentShape];
+        return currentShape ? allBottleShapes[currentShape] : null;
+      }
+
+      function toggleViewSelector() {
+          if (currentShapeType === 'sweet_box') {
+              viewSelector.classList.remove('hidden');
+          } else {
+              viewSelector.classList.add('hidden');
+          }
+      }
+
+      function updateSpecificShapeSelector() {
+          shapeSelect.innerHTML = "";
+          let isFirstShapeInType = true;
+          let tempCurrentShape = null;
+
+          if (currentShapeType !== 'sweet_box') {
+            currentView = 'bottom';
+          }
+
+          for (const [key, shape] of Object.entries(allBottleShapes)) {
+              if (shape.type === currentShapeType && shape.view === currentView) {
+                  const option = document.createElement("option");
+                  option.value = key;
+                  option.textContent = shape.name;
+                  shapeSelect.appendChild(option);
+                  
+                  if (isFirstShapeInType) {
+                      tempCurrentShape = key;
+                      isFirstShapeInType = false;
+                  }
+              }
+          }
+
+          currentShape = tempCurrentShape;
+          if (currentShape) {
+            shapeSelect.value = currentShape;
+          }
+      }
+      
+      function populateShapeTypes() {
+        shapeTypeSelect.innerHTML = "";
+        for(const [key, name] of Object.entries(shapeTypes)) {
+          const option = document.createElement("option");
+          option.value = key;
+          option.textContent = name;
+          shapeTypeSelect.appendChild(option);
+        }
+        shapeTypeSelect.value = currentShapeType;
       }
 
       function resizeCanvas() {
@@ -299,27 +325,28 @@
         ctx.imageSmoothingEnabled = true;
         ctx.imageSmoothingQuality = "high";
       }
-      
+
       function drawWarp(localCtx, img, shape, offsetX, offsetY, finalScale, isExport, heightAdjust = 1.0) {
         const sliceCount = isExport ? 4000 : 2000;
         const imgWidth = img.width;
         const imgHeight = img.height;
         const sourceSliceWidth = imgWidth / sliceCount;
 
-        const isWideShape = (currentShape === "500ml_round_square" || currentShape === "500ml_sweet_box");
-        const isSweetBox = (currentShape === "500ml_sweet_box");
+        const isWideShape = (shape.type === 'round_square' || shape.type === 'sweet_box');
+        const isSweetBox = (shape.type === 'sweet_box');
+        const isLargeRound = (currentShape === '300ml_round' || currentShape === '500ml_round' || currentShape === '750ml_round' || currentShape === '1000ml_round');
         
-        // Enhanced overlap for better edge coverage, especially for Sweet Box
         let baseOverlap;
         if (isSweetBox) {
-          baseOverlap = isExport ? 40 : 20; // Much higher base for Sweet Box
+          baseOverlap = isExport ? 40 : 20;
+        } else if (isLargeRound) {
+            baseOverlap = isExport ? 30 : 15;
         } else if (isWideShape) {
           baseOverlap = isExport ? 20 : 10;
         } else {
           baseOverlap = isExport ? 8 : 4;
         }
 
-        // More aggressive extension for Sweet Box
         const extendAmount = isSweetBox ? (isExport ? 30 : 15) : (isExport ? 10 : 5);
         const startOffset = -extendAmount;
         const endOffset = extendAmount;
@@ -327,22 +354,16 @@
         for (let i = startOffset; i < sliceCount + endOffset; i++) {
           const t0 = i / sliceCount;
           const t1 = (i + 1) / sliceCount;
-
-          // More aggressive extension for Sweet Box edges
           const edgeExtension = isSweetBox ? 0.03 : 0.01;
-          
           const tTop0 = shape.topIsReversed ? 1 - t0 : t0;
           const tTop1 = shape.topIsReversed ? 1 - t1 : t1;
           const tBot0 = shape.bottomIsReversed ? 1 - t0 : t0;
           const tBot1 = shape.bottomIsReversed ? 1 - t1 : t1;
-
-          // Allow more extension for Sweet Box
           const clampedTTop0 = Math.min(Math.max(tTop0, -edgeExtension), 1 + edgeExtension);
           const clampedTTop1 = Math.min(Math.max(tTop1, -edgeExtension), 1 + edgeExtension);
           const clampedTBot0 = Math.min(Math.max(tBot0, -edgeExtension), 1 + edgeExtension);
           const clampedTBot1 = Math.min(Math.max(tBot1, -edgeExtension), 1 + edgeExtension);
 
-          // Skip if completely outside range
           if ((clampedTTop0 < -0.05 && clampedTTop1 < -0.05) || (clampedTTop0 > 1.05 && clampedTTop1 > 1.05)) continue;
 
           const pTop1 = shape.topSampler.getPointAt(Math.min(Math.max(clampedTTop0, 0), 1));
@@ -370,73 +391,60 @@
           const topWidth = Math.hypot(top2X - top1X, top2Y - top1Y);
           const botWidth = Math.hypot(bot2X - bot1X, bot2Y - bot1Y);
           const sliceWidth = Math.max(topWidth, botWidth);
-
-          // Much more aggressive overlap for Sweet Box edges
+          
           let overlap = baseOverlap;
           if (isSweetBox) {
             const normalizedT = Math.min(Math.max(t0, 0), 1);
-            // Very aggressive edge overlap for Sweet Box
             if (isExport) {
-              if (normalizedT < 0.02 || normalizedT > 0.98) {
-                overlap = 80; // Extreme overlap at the very edges
-              } else if (normalizedT < 0.05 || normalizedT > 0.95) {
-                overlap = 60;
-              } else if (normalizedT < 0.1 || normalizedT > 0.9) {
-                overlap = 40;
-              } else {
-                const edgeFactor = Math.min(normalizedT * 3, (1 - normalizedT) * 3, 1);
-                overlap = baseOverlap + (20 - baseOverlap) * (1 - edgeFactor);
-              }
+              if (normalizedT < 0.02 || normalizedT > 0.98) { overlap = 80; } 
+              else if (normalizedT < 0.05 || normalizedT > 0.95) { overlap = 60; } 
+              else if (normalizedT < 0.1 || normalizedT > 0.9) { overlap = 40; } 
+              else { const edgeFactor = Math.min(normalizedT * 3, (1 - normalizedT) * 3, 1); overlap = baseOverlap + (20 - baseOverlap) * (1 - edgeFactor); }
             } else {
-              if (normalizedT < 0.05 || normalizedT > 0.95) {
-                overlap = 40;
-              } else if (normalizedT < 0.1 || normalizedT > 0.9) {
-                overlap = 30;
-              } else {
-                overlap = 20;
-              }
+              if (normalizedT < 0.05 || normalizedT > 0.95) { overlap = 40; } 
+              else if (normalizedT < 0.1 || normalizedT > 0.9) { overlap = 30; } 
+              else { overlap = 20; }
             }
           } else if (isWideShape) {
             const normalizedT = Math.min(Math.max(t0, 0), 1);
             const edgeFactor = Math.min(normalizedT * 5, (1 - normalizedT) * 5, 1);
             overlap = baseOverlap + (15 - baseOverlap) * (1 - edgeFactor);
-            
             if (isExport) {
               if (normalizedT < 0.05 || normalizedT > 0.95) overlap += 25;
               else if (normalizedT < 0.1 || normalizedT > 0.9) overlap += 15;
             } else {
               if (normalizedT < 0.1 || normalizedT > 0.9) overlap += 10;
             }
+          }// --- ADD THIS NEW BLOCK ---
+          else if (isLargeRound) {
+            const normalizedT = Math.min(Math.max(t0, 0), 1);
+            // Add extra overlap at the edges, just like isWideShape
+            if (isExport) {
+            if (normalizedT < 0.05 || normalizedT > 0.95) overlap += 25;
+            else if (normalizedT < 0.1 || normalizedT > 0.9) overlap += 15;
+            } else {
+            if (normalizedT < 0.1 || normalizedT > 0.9) overlap += 10;
+            }
           }
-
+          
           if (sliceWidth < 0.1) continue;
 
           localCtx.save();
           localCtx.translate(midTopX, midTopY);
           localCtx.rotate(sliceAngle);
           
-          // More vertical extension for Sweet Box
           let verticalExtension = 0;
-          if(isSweetBox) {
-            verticalExtension = isExport ? 40 : 20;
-          } else if(isWideShape) {
-            verticalExtension = isExport ? 30 : 15;
-          } else if (currentShape === "250ml_round") {
-            verticalExtension = isExport ? 10 : 0;
+          if(shape.type !== 'rectangle') {
+             if(isSweetBox) { verticalExtension = isExport ? 40 : 20; } 
+             else if(isWideShape) { verticalExtension = isExport ? 22 : 10; } 
+             else if (shape.type === "round") { verticalExtension = isExport ? 10 : 0; }
           }
-
-          // Adjust source position to use more of the image for Sweet Box edges
+          
           let adjustedSourceX = i - startOffset;
           if (isSweetBox) {
-            // Stretch the image more at the edges for Sweet Box
-            if (t0 < 0) {
-              adjustedSourceX = 0; // Use leftmost part of image
-            } else if (t0 > 1) {
-              adjustedSourceX = sliceCount - 1; // Use rightmost part of image
-            } else {
-              // Slight compression in the middle to allow more content at edges
-              adjustedSourceX = t0 * sliceCount;
-            }
+            if (t0 < 0) { adjustedSourceX = 0; } 
+            else if (t0 > 1) { adjustedSourceX = sliceCount - 1; } 
+            else { adjustedSourceX = t0 * sliceCount; }
           }
           
           const sourceX = Math.max(0, Math.min(adjustedSourceX * sourceSliceWidth, imgWidth - sourceSliceWidth));
@@ -458,6 +466,8 @@
         }
         
         const shape = getCurrentShape();
+        if (!shape) return; // Exit if no shape is selected
+
         const margin = isExport ? 0 : 20;
 
         const scaleXFit = (targetW - 2 * margin) / shape.width;
@@ -512,6 +522,16 @@
         renderImageContent(localCtx, targetW, targetH, isExport, exportScale, clearBackground);
         
         const shape = getCurrentShape();
+        if (!shape) {
+            if (clearBackground) localCtx.clearRect(0,0,targetW * (window.devicePixelRatio || 1) ,targetH * (window.devicePixelRatio || 1));
+            const dpr = window.devicePixelRatio || 1;
+            localCtx.font = `${16 * dpr}px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif`;
+            localCtx.textAlign = "center";
+            localCtx.fillStyle = "#9ca3af";
+            localCtx.fillText("No shapes available for this view/type combination.", targetW * dpr /2, targetH * dpr /2);
+            return;
+        }
+
         const margin = isExport ? 0 : 20;
         const scaleXFit = (targetW - 2 * margin) / shape.width;
         const scaleYFit = (targetH - 2 * margin) / shape.height;
@@ -543,14 +563,14 @@
       }
 
       function handleImageUpload(event) {
-        const file = event.target.files[0];
-        imgError.style.display = "none";
+        const file = (event.target.files || [])[0];
+        imgError.classList.add('hidden');
         imgError.innerHTML = "";
 
         if (!file) {
           currentImage = null;
           mainDraw();
-          uploadText.innerHTML = "Drag & drop or <span>Browse</span>";
+          uploadText.innerHTML = 'Drag & drop or <span class="font-semibold text-blue-600 underline">Browse</span>';
           return;
         }
 
@@ -563,13 +583,13 @@
             let name =
               dotIndex !== -1 ? fullName.substring(0, dotIndex) : fullName;
             const ext = dotIndex !== -1 ? fullName.substring(dotIndex) : "";
-            if (name.length > 7) name = name.substring(0, 7);
-            uploadText.textContent = `${name}.......${ext}`;
+            if (name.length > 12) name = name.substring(0, 12) + '...';
+            uploadText.textContent = `${name}${ext}`;
             currentImage = img;
             mainDraw();
           };
           img.onerror = () => {
-            imgError.style.display = "block";
+            imgError.classList.remove('hidden');
             imgError.textContent = "Failed to load image.";
             currentImage = null;
             mainDraw();
@@ -577,6 +597,37 @@
           img.src = e.target.result;
         };
         reader.readAsDataURL(file);
+      }
+
+      function handleViewChange(event) {
+          const oldShapeKey = currentShape;
+          const newView = event.target.value;
+          currentView = newView;
+
+          let targetShapeKey = null;
+
+          if (oldShapeKey && allBottleShapes[oldShapeKey] && allBottleShapes[oldShapeKey].type === 'sweet_box') {
+              const baseName = oldShapeKey.replace('_top', '').replace('_bottom', '');
+              const potentialNewKey = `${baseName}_${newView}`;
+              if (allBottleShapes[potentialNewKey]) {
+                  targetShapeKey = potentialNewKey;
+              }
+          }
+          
+          updateSpecificShapeSelector(); 
+
+          if (targetShapeKey) {
+              shapeSelect.value = targetShapeKey;
+              currentShape = targetShapeKey;
+          }
+          mainDraw();
+      }
+
+      function handleShapeTypeChange(event) {
+        currentShapeType = event.target.value;
+        toggleViewSelector();
+        updateSpecificShapeSelector();
+        mainDraw();
       }
 
       function handleShapeChange(event) {
@@ -590,6 +641,10 @@
           return;
         }
         const shape = getCurrentShape();
+        if (!shape) {
+            alert("No shape selected for export.");
+            return;
+        }
         const exportWidth = shape.width * EXPORT_SCALE;
         const exportHeight = shape.height * EXPORT_SCALE;
         const exportCanvas = document.createElement("canvas");
@@ -622,6 +677,10 @@
 
       function exportSVG() {
         const shape = getCurrentShape();
+         if (!shape) {
+            alert("No shape selected for export.");
+            return;
+        }
         let svgContent = "";
 
         if (currentImage) {
@@ -685,11 +744,16 @@ ${svgContent}
       }
 
 
+      // --- Event Listeners ---
       window.addEventListener("resize", mainDraw);
       fileInput.addEventListener("input", handleImageUpload);
       exportPngBtn.addEventListener("click", exportPNG);
       exportSvgBtn.addEventListener("click", exportSVG);
+      shapeTypeSelect.addEventListener("change", handleShapeTypeChange);
       shapeSelect.addEventListener("change", handleShapeChange);
+      document.querySelectorAll('input[name="view_type"]').forEach(radio => {
+        radio.addEventListener('change', handleViewChange);
+      });
 
       document.addEventListener("keydown", (e) => {
         if (e.ctrlKey || e.metaKey) {
@@ -703,25 +767,35 @@ ${svgContent}
         }
       });
 
-      dropArea.addEventListener("dragover", (e) => {
+      const fileUploadLabel = document.querySelector('.file-upload-label');
+      fileUploadLabel.addEventListener("dragover", (e) => {
         e.preventDefault();
-        dropArea.classList.add("dragover");
+        fileUploadLabel.classList.add("dragover");
       });
-      dropArea.addEventListener("dragleave", (e) => {
+      fileUploadLabel.addEventListener("dragleave", (e) => {
         e.preventDefault();
-        dropArea.classList.remove("dragover");
+        fileUploadLabel.classList.remove("dragover");
       });
-      dropArea.addEventListener("drop", (e) => {
+      fileUploadLabel.addEventListener("drop", (e) => {
         e.preventDefault();
-        dropArea.classList.remove("dragover");
+        fileUploadLabel.classList.remove("dragover");
         if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
           fileInput.files = e.dataTransfer.files;
           const event = new Event("input", { bubbles: true });
           fileInput.dispatchEvent(event);
         }
       });
+      
+      // --- Initialization ---
+      function initializeApp() {
+        currentView = document.querySelector('input[name="view_type"]:checked').value;
+        populateShapeTypes();
+        toggleViewSelector();
+        updateSpecificShapeSelector();
+        mainDraw();
+      }
 
-      mainDraw();
+      initializeApp();
     </script>
   </body>
 </html>

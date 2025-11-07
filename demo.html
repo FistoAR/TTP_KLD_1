@@ -7,9 +7,12 @@
     <!-- Include Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-      /* Custom style for the drag-over effect, as Tailwind doesn't have a dragover variant by default */
+      /* Custom style for the drag-over effect and hiding radio button parents */
       .dragover {
         border-color: #3b82f6; /* Equivalent to border-blue-500 */
+      }
+      .radio-container.hidden {
+          display: none;
       }
     </style>
   </head>
@@ -34,11 +37,11 @@
         <!-- Top/Bottom View Selector (for Sweet Box) -->
         <div id="viewSelector" class="hidden self-end pb-1">
           <div class="radio-group flex flex-col gap-1">
-            <div>
+            <div class="radio-container">
               <input type="radio" id="viewTopRadio" name="view_type" value="top" class="cursor-pointer accent-blue-600">
               <label for="viewTopRadio" class="text-sm ml-2 text-slate-700 cursor-pointer">Top</label>
             </div>
-            <div>
+            <div class="radio-container">
               <input type="radio" id="viewBottomRadio" name="view_type" value="bottom" checked class="cursor-pointer accent-blue-600">
               <label for="viewBottomRadio" class="text-sm ml-2 text-slate-700 cursor-pointer">Bottom</label>
             </div>
@@ -58,7 +61,10 @@
         <!-- Export Buttons -->
         <button class="export h-12 px-6 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 transition" id="exportPngBtn">Export PNG</button>
         <button class="export h-12 px-6 bg-orange-500 text-white font-semibold rounded-lg hover:bg-orange-600 transition" id="exportSvgBtn">
-          Export SVG (AI Ready)
+          Export SVG
+        </button>
+        <button class="export h-12 px-6 bg-purple-600 text-white font-semibold rounded-lg hover:bg-purple-700 transition" id="exportAiBtn">
+          Export AI
         </button>
       </div>
     </div>
@@ -69,8 +75,6 @@
     </div>
 
     <script>
-      // The JavaScript logic remains the same, as it primarily manipulates the canvas and data, not the CSS.
-      // Small changes are made to interact with the new class-based UI (e.g., 'hidden' class).
       let currentImage = null;
       let currentView = 'bottom';
       let currentShapeType = "round";
@@ -85,10 +89,10 @@
       const fileInput = document.getElementById("imageUpload");
       const exportPngBtn = document.getElementById("exportPngBtn");
       const exportSvgBtn = document.getElementById("exportSvgBtn");
+      const exportAiBtn = document.getElementById("exportAiBtn");
       const shapeTypeSelect = document.getElementById("shapeTypeSelect");
       const shapeSelect = document.getElementById("shapeSelect");
       const viewSelector = document.getElementById("viewSelector");
-
 
       class PathSampler {
         constructor(pathData) {
@@ -108,7 +112,8 @@
         'round': 'Round',
         'round_square': 'Round Square',
         'rectangle': 'Rectangle',
-        'sweet_box': 'Sweet Box'
+        'sweet_box': 'Sweet Box',
+        'sweet_box_te': 'Sweet Box TE' 
       };
 
       const allBottleShapes = {
@@ -199,7 +204,7 @@
         "750ml_rectangle": {
             type: "rectangle",
             view: "bottom",
-            name: "750ml Rectangle",
+            name: "500ml / 750ml Rectangle",
             width: 462.62,
             height: 309.76,
             path: "M.99,47.31 C.99,21.73 21.73,.99 47.31,.99 H 415.31 C 440.89,.99 461.63,21.73 461.63,47.31 V 262.45 C 461.63,288.03 440.89,308.77 415.31,308.77 H 47.31 C 21.73,308.77 .99,288.03 .99,262.45 Z",
@@ -208,7 +213,18 @@
             topIsReversed: false,
             bottomIsReversed: false,
         },
-        // --- SWEET BOX SHAPES ---
+        "1kg_sweet_box_top": {
+            type: "sweet_box",
+            view: "top",
+            name: "1kg Sweet Box",
+            width: 636.39,
+            height: 455.59,
+            path: "M.5.5 h635.39 v454.59 h-635.39 Z",
+            topPath: "M0,0 H636.39",
+            bottomPath: "M0,455.59 H636.39",
+            topIsReversed: false,
+            bottomIsReversed: false,
+        },
         "250ml_sweet_box_top": {
             type: "sweet_box",
             view: "top",
@@ -257,52 +273,156 @@
           topIsReversed: false,
           bottomIsReversed: true,
         },
+        "250ml_sweet_box_te_top": {
+            type: "sweet_box_te",
+            view: "top",
+            name: "250ml Sweet Box TE",
+            width: 378.23,
+            height: 296.16,
+            path: "M 344.73 .5 346.35 .54 347.96 .65 349.57 .85 351.17 1.12 354.31 1.92 357.36 3.01 360.29 4.39 363.07 6.05 365.67 7.98 368.07 10.17 370.24 12.57 372.18 15.16 373.84 17.94 375.23 20.88 376.32 23.93 377.11 27.07 377.38 28.66 377.58 30.27 377.7 31.89 377.73 33.51 377.73 262.66 377.7 264.28 377.58 265.89 377.38 267.5 377.11 269.1 376.32 272.24 375.23 275.29 373.84 278.22 372.18 281 370.24 283.6 368.07 286 365.67 288.17 363.07 290.11 360.29 291.77 357.36 293.15 354.31 294.24 351.17 295.03 349.57 295.31 347.96 295.51 346.35 295.62 344.73 295.66 33.51 295.66 31.89 295.62 30.27 295.51 28.66 295.31 27.07 295.03 23.92 294.24 20.88 293.15 17.94 291.77 15.16 290.11 12.56 288.17 10.17 286 7.99 283.6 6.06 281 4.39 278.22 3.01 275.29 1.92 272.24 1.13 269.1 .85 267.5 .66 265.89 .54 264.28 .5 262.66 .5 33.51 .54 31.89 .66 30.27 .85 28.66 1.13 27.07 1.92 23.93 3.01 20.88 4.39 17.94 6.06 15.16 7.99 12.57 10.17 10.17 12.56 7.98 15.16 6.05 17.94 4.39 20.88 3.01 23.92 1.92 27.07 1.12 28.66 .85 30.27 .65 31.89 .54 33.51 .5 344.73 .5 Z",
+            topPath: "M0,0 H378.23",
+            bottomPath: "M0,296.16 H378.23",
+            topIsReversed: false,
+            bottomIsReversed: false,
+        },
+        // <-- MODIFIED: UPDATED SHAPE DEFINITION -->
+        "250ml_sweet_box_te_bottom": {
+            type: "sweet_box_te",
+            view: "bottom",
+            name: "250ml Sweet Box TE",
+            width: 557.78,
+            height: 475.73,
+            path: "M437.53,98.37c12.09,0,21.88,9.8,21.88,21.88h97.87v235.23h-97.87c0,12.08-9.79,21.88-21.88,21.88h0v97.87H120.25v-97.86h0c-12.09-.01-21.88-9.81-21.88-21.89H.5V120.25h97.87c0-12.08,9.79-21.88,21.88-21.88h0V.5h317.28v97.86h0Z",
+            topPath: "M0,0 H557.78",
+            bottomPath: "M0,475.73 H557.78",
+            topIsReversed: false,
+            bottomIsReversed: false,
+        },
+        "500ml_sweet_box_te_bottom": {
+            type: "sweet_box_te",
+            view: "bottom",
+            name: "500ml Sweet Box TE",
+            width: 695.7,
+            height: 560.63,
+            path: "M 122.64 3.76 122.39 .92 572.87 .5 572.62 3.34 563.84 104.14 564.26 104.14 566.94 104.29 569.58 104.7 572.17 105.36 574.68 106.27 577.09 107.42 579.38 108.8 581.52 110.39 583.5 112.18 585.29 114.16 586.88 116.3 588.26 118.59 589.41 121 590.32 123.51 590.98 126.1 591.39 128.74 591.54 131.41 591.54 131.84 692.37 123.05 695.2 122.78 695.2 437.82 692.37 437.58 591.54 428.8 591.54 429.22 591.28 432.82 590.5 436.5 589.18 440.16 587.3 443.69 584.89 446.96 582 449.84 578.74 452.26 575.21 454.14 571.54 455.46 567.86 456.23 564.26 456.5 563.84 456.5 572.62 557.3 572.88 560.13 122.39 559.7 122.64 556.87 131.39 456.5 130.96 456.5 127.37 456.23 123.69 455.46 120.02 454.14 116.49 452.26 113.23 449.84 110.34 446.96 107.93 443.69 106.05 440.16 104.72 436.5 103.95 432.82 103.69 429.22 103.69 428.99 103.69 428.8 3.34 437.54 .5 437.78 .5 122.84 3.34 123.09 103.69 131.84 103.69 131.64 103.69 131.41 103.95 127.82 104.72 124.14 106.05 120.47 107.93 116.94 110.34 113.68 113.23 110.79 116.49 108.38 120.02 106.5 123.69 105.17 127.37 104.4 130.96 104.14 131.39 104.14 122.64 3.76 Z",
+            topPath: "M 131.39 104.14 H 563.84",
+            bottomPath: "M 131.39 456.5 H 563.84",
+            topIsReversed: false,
+            bottomIsReversed: false,
+        },
+        "500ml_sweet_box_te_top": {
+            type: "sweet_box_te",
+            view: "top",
+            name: "500ml Sweet Box TE",
+            width: 509.61,
+            height: 374.16,
+            path: "M3.86,28.85C4.36,15.15,15.42,4.2,29.12,3.86,179.56.04,330.06.04,480.5,3.86c13.7.34,24.76,11.29,25.26,24.99,3.82,105.45,3.82,211.01,0,316.46-.5,13.7-11.56,24.65-25.26,25-150.44,3.81-300.94,3.81-451.38,0-13.7-.35-24.76-11.3-25.26-25C.04,239.86.04,134.3,3.86,28.85Z",
+            topPath: "M0,0 H509.61",
+            bottomPath: "M0,374.16 H509.61",
+            topIsReversed: false,
+            bottomIsReversed: false,
+        }
       };
 
-      Object.values(allBottleShapes).forEach((shape) => {
-        shape.topSampler = new PathSampler(shape.topPath);
-        shape.bottomSampler = new PathSampler(shape.bottomPath);
-      });
+      const shapeGroups = {};
+      const keyToGroupName = {};
+      
+      // Pre-process shapes to create helper maps for faster lookups
+      function preProcessShapes() {
+        for (const [key, shape] of Object.entries(allBottleShapes)) {
+          // Initialize path samplers
+          shape.topSampler = new PathSampler(shape.topPath);
+          shape.bottomSampler = new PathSampler(shape.bottomPath);
+          
+          // Group shapes by name for sweet box logic
+          if (!shapeGroups[shape.name]) {
+              shapeGroups[shape.name] = {};
+          }
+          shapeGroups[shape.name][shape.view] = key;
+          
+          // Map individual keys back to their group name
+          keyToGroupName[key] = shape.name;
+        }
+      }
 
       function getCurrentShape() {
         return currentShape ? allBottleShapes[currentShape] : null;
       }
 
       function toggleViewSelector() {
-          if (currentShapeType === 'sweet_box') {
+          if (currentShapeType === 'sweet_box' || currentShapeType === 'sweet_box_te') {
               viewSelector.classList.remove('hidden');
           } else {
               viewSelector.classList.add('hidden');
           }
       }
 
+      function syncSweetBoxViewControls() {
+        const topRadioDiv = document.getElementById('viewTopRadio').parentElement;
+        const bottomRadioDiv = document.getElementById('viewBottomRadio').parentElement;
+
+       if ((currentShapeType !== 'sweet_box' && currentShapeType !== 'sweet_box_te') || !currentShape) {
+            topRadioDiv.classList.add('hidden');
+            bottomRadioDiv.classList.add('hidden');
+            return;
+        }
+
+        const groupName = keyToGroupName[currentShape];
+        const group = shapeGroups[groupName];
+
+        topRadioDiv.classList.toggle('hidden', !group.top);
+        bottomRadioDiv.classList.toggle('hidden', !group.bottom);
+
+        if (currentShape.endsWith('_top')) {
+            currentView = 'top';
+            document.getElementById('viewTopRadio').checked = true;
+        } else if (currentShape.endsWith('_bottom')) {
+            currentView = 'bottom';
+            document.getElementById('viewBottomRadio').checked = true;
+        }
+      }
+
       function updateSpecificShapeSelector() {
           shapeSelect.innerHTML = "";
-          let isFirstShapeInType = true;
-          let tempCurrentShape = null;
+          let firstShapeKey = null;
 
-          if (currentShapeType !== 'sweet_box') {
-            currentView = 'bottom';
-          }
-
-          for (const [key, shape] of Object.entries(allBottleShapes)) {
-              if (shape.type === currentShapeType && shape.view === currentView) {
-                  const option = document.createElement("option");
-                  option.value = key;
-                  option.textContent = shape.name;
-                  shapeSelect.appendChild(option);
-                  
-                  if (isFirstShapeInType) {
-                      tempCurrentShape = key;
-                      isFirstShapeInType = false;
+          if (currentShapeType === 'sweet_box' || currentShapeType === 'sweet_box_te') {
+              const uniqueNames = new Set();
+              for (const key in allBottleShapes) {
+                  const shape = allBottleShapes[key];
+                  if (shape.type === currentShapeType && !uniqueNames.has(shape.name)) {
+                      uniqueNames.add(shape.name);
+                      const option = document.createElement("option");
+                      option.value = shape.name; 
+                      option.textContent = shape.name;
+                      shapeSelect.appendChild(option);
                   }
+              }
+              if (shapeSelect.options.length > 0) {
+                  const selectedName = shapeSelect.options[0].value;
+                  shapeSelect.value = selectedName;
+                  const group = shapeGroups[selectedName];
+                  firstShapeKey = group.top || group.bottom;
+              }
+          } else {
+              for (const [key, shape] of Object.entries(allBottleShapes)) {
+                  if (shape.type === currentShapeType) {
+                      const option = document.createElement("option");
+                      option.value = key;
+                      option.textContent = shape.name;
+                      shapeSelect.appendChild(option);
+                      if (!firstShapeKey) {
+                          firstShapeKey = key;
+                      }
+                  }
+              }
+              if (firstShapeKey) {
+                  shapeSelect.value = firstShapeKey;
               }
           }
 
-          currentShape = tempCurrentShape;
-          if (currentShape) {
-            shapeSelect.value = currentShape;
-          }
+          currentShape = firstShapeKey;
+          syncSweetBoxViewControls();
       }
       
       function populateShapeTypes() {
@@ -332,8 +452,8 @@
         const imgHeight = img.height;
         const sourceSliceWidth = imgWidth / sliceCount;
 
-        const isWideShape = (shape.type === 'round_square' || shape.type === 'sweet_box');
-        const isSweetBox = (shape.type === 'sweet_box');
+        const isWideShape = (shape.type === 'round_square' || shape.type === 'sweet_box' || shape.type === 'sweet_box_te');
+        const isSweetBox = (shape.type === 'sweet_box' || shape.type === 'sweet_box_te');
         const isLargeRound = (currentShape === '300ml_round' || currentShape === '500ml_round' || currentShape === '750ml_round' || currentShape === '1000ml_round');
         
         let baseOverlap;
@@ -415,10 +535,9 @@
             } else {
               if (normalizedT < 0.1 || normalizedT > 0.9) overlap += 10;
             }
-          }// --- ADD THIS NEW BLOCK ---
+          }
           else if (isLargeRound) {
             const normalizedT = Math.min(Math.max(t0, 0), 1);
-            // Add extra overlap at the edges, just like isWideShape
             if (isExport) {
             if (normalizedT < 0.05 || normalizedT > 0.95) overlap += 25;
             else if (normalizedT < 0.1 || normalizedT > 0.9) overlap += 15;
@@ -437,7 +556,13 @@
           if(shape.type !== 'rectangle') {
              if(isSweetBox) { verticalExtension = isExport ? 40 : 20; } 
              else if(isWideShape) { verticalExtension = isExport ? 22 : 10; } 
-             else if (shape.type === "round") { verticalExtension = isExport ? 10 : 0; }
+             else if (shape.type === "round") { 
+              if(shape.name === "250ml Round"){
+                verticalExtension = isExport ? 0 : 0;
+              }else{
+                verticalExtension = isExport ? 10 : 0; 
+              }
+            }
           }
           
           let adjustedSourceX = i - startOffset;
@@ -466,10 +591,9 @@
         }
         
         const shape = getCurrentShape();
-        if (!shape) return; // Exit if no shape is selected
+        if (!shape) return;
 
         const margin = isExport ? 0 : 20;
-
         const scaleXFit = (targetW - 2 * margin) / shape.width;
         const scaleYFit = (targetH - 2 * margin) / shape.height;
         const finalScale = isExport ? exportScale : Math.min(scaleXFit, scaleYFit);
@@ -495,13 +619,42 @@
           localCtx.setTransform(1, 0, 0, 1, 0, 0);
           
           if (!isExport && window.devicePixelRatio && localCtx === ctx) {
-               localCtx.scale(window.devicePixelRatio, window.devicePixelRatio);
-          }
-          
-          const heightAdjust = 1.0;
-          drawWarp(localCtx, currentImage, shape, offsetX, offsetY, finalScale, isExport, heightAdjust);
-          
-          localCtx.restore(); 
+           localCtx.scale(window.devicePixelRatio, window.devicePixelRatio);
+      }
+
+      // Check if the shape is a flat die-cut that shouldn't be warped
+      if (shape.type === 'sweet_box_te') {
+    
+    let drawOffsetX = offsetX;
+    let drawOffsetY = offsetY;
+    let drawScaledW = scaledW;
+    let drawScaledH = scaledH;
+
+    // --- MODIFICATION: Add 5% bleed for this specific shape ---
+    if (currentShape === '250ml_sweet_box_te_bottom') {
+      const scaleFactor = 1.029; // 5% larger for bleed
+      drawScaledW = scaledW * scaleFactor;
+      drawScaledH = scaledH * scaleFactor;
+      // Re-center the oversized image so it scales from the middle
+      drawOffsetX = offsetX - (drawScaledW - scaledW) / 2;
+      drawOffsetY = offsetY - (drawScaledH - scaledH) / 2;
+   }
+    // --- END MODIFICATION ---
+
+    localCtx.drawImage(
+      currentImage, 
+      drawOffsetX, 
+      drawOffsetY, 
+      drawScaledW, 
+      drawScaledH
+    );
+   } else {
+        // For all other shapes, use the original warp logic
+        const heightAdjust = 1.0;
+        drawWarp(localCtx, currentImage, shape, offsetX, offsetY, finalScale, isExport, heightAdjust);
+      }
+
+      localCtx.restore();
 
         } else {
           localCtx.save();
@@ -528,7 +681,7 @@
             localCtx.font = `${16 * dpr}px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif`;
             localCtx.textAlign = "center";
             localCtx.fillStyle = "#9ca3af";
-            localCtx.fillText("No shapes available for this view/type combination.", targetW * dpr /2, targetH * dpr /2);
+            localCtx.fillText("No shapes available for this type/view.", targetW * dpr /2, targetH * dpr /2);
             return;
         }
 
@@ -600,27 +753,19 @@
       }
 
       function handleViewChange(event) {
-          const oldShapeKey = currentShape;
           const newView = event.target.value;
           currentView = newView;
 
-          let targetShapeKey = null;
-
-          if (oldShapeKey && allBottleShapes[oldShapeKey] && allBottleShapes[oldShapeKey].type === 'sweet_box') {
-              const baseName = oldShapeKey.replace('_top', '').replace('_bottom', '');
-              const potentialNewKey = `${baseName}_${newView}`;
-              if (allBottleShapes[potentialNewKey]) {
-                  targetShapeKey = potentialNewKey;
+          if (currentShapeType === 'sweet_box' || currentShapeType === 'sweet_box_te') {
+              const groupName = shapeSelect.value;
+              const group = shapeGroups[groupName];
+              const newShapeKey = group[newView];
+              
+              if (newShapeKey) {
+                  currentShape = newShapeKey;
+                  mainDraw();
               }
           }
-          
-          updateSpecificShapeSelector(); 
-
-          if (targetShapeKey) {
-              shapeSelect.value = targetShapeKey;
-              currentShape = targetShapeKey;
-          }
-          mainDraw();
       }
 
       function handleShapeTypeChange(event) {
@@ -631,8 +776,17 @@
       }
 
       function handleShapeChange(event) {
-        currentShape = event.target.value;
-        mainDraw();
+          const selectedValue = event.target.value;
+
+          if (currentShapeType === 'sweet_box' || currentShapeType === 'sweet_box_te') {
+              const group = shapeGroups[selectedValue];
+              currentShape = group.top || group.bottom; 
+          } else {
+              currentShape = selectedValue;
+          }
+          
+          syncSweetBoxViewControls();
+          mainDraw();
       }
 
       function exportPNG() {
@@ -665,7 +819,7 @@
           (blob) => {
             const link = document.createElement("a");
             link.href = URL.createObjectURL(blob);
-            link.download = `${currentShape}_Wrap_HighRes.png`;
+            link.download = `${currentShape}_Wrap.png`;
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);
@@ -675,12 +829,9 @@
         );
       }
 
-      function exportSVG() {
+      function createSVGString() {
         const shape = getCurrentShape();
-         if (!shape) {
-            alert("No shape selected for export.");
-            return;
-        }
+        if (!shape) return null;
         let svgContent = "";
 
         if (currentImage) {
@@ -691,64 +842,63 @@
           exportCanvas.height = exportHeight;
           const exportCtx = exportCanvas.getContext("2d", { alpha: true });
           
-          renderImageContent(
-            exportCtx,
-            exportWidth,
-            exportHeight,
-            true,
-            EXPORT_SCALE,
-            true
-          );
+          renderImageContent(exportCtx, exportWidth, exportHeight, true, EXPORT_SCALE, true);
           
           const rasterData = exportCanvas.toDataURL("image/png");
 
-          svgContent = `
-    <image 
-      x="0" y="0" 
-      width="${shape.width}" 
-      height="${shape.height}" 
-      xlink:href="${rasterData}"
-      preserveAspectRatio="none" />
-    <path d="${shape.path}" 
-          fill="none" 
-          stroke="#ed312c" 
-          stroke-width="0.75" 
-          stroke-miterlimit="10" />`;
-
+          svgContent = `<image x="0" y="0" width="${shape.width}" height="${shape.height}" xlink:href="${rasterData}" preserveAspectRatio="none" /><path d="${shape.path}" fill="none" stroke="#ed312c" stroke-width="0.75" stroke-miterlimit="10" />`;
         } else {
-          svgContent = `
-    <path d="${shape.path}" 
-          fill="#eeeeee" 
-          stroke="#ed312c" 
-          stroke-width="0.75" 
-          stroke-miterlimit="10" />`;
+          svgContent = `<path d="${shape.path}" fill="#eeeeee" stroke="#ed312c" stroke-width="0.75" stroke-miterlimit="10" />`;
         }
 
-        const svg = `<?xml version="1.0" encoding="UTF-8"?>
-<svg version="1.1" 
-     id="Layer_1"
-     xmlns="http://www.w3.org/2000/svg" 
-     xmlns:xlink="http://www.w3.org/1999/xlink"
-     viewBox="0 0 ${shape.width} ${shape.height}"
-     xml:space="preserve">
-${svgContent}
-</svg>`;
+        return `<?xml version="1.0" encoding="UTF-8"?>
+        <svg version="1.1" id="Layer_1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 ${shape.width} ${shape.height}" xml:space="preserve">
+        ${svgContent}
+        </svg>`;
+      }
 
-        const blob = new Blob([svg], { type: "image/svg+xml;charset=utf-8" });
+      function exportSVG() {
+        const shape = getCurrentShape();
+        if (!shape) {
+            alert("No shape selected for export.");
+            return;
+        }
+        const svgString = createSVGString();
+        if (!svgString) return;
+
+        const blob = new Blob([svgString], { type: "image/svg+xml;charset=utf-8" });
         const link = document.createElement("a");
         link.href = URL.createObjectURL(blob);
-        link.download = `${currentShape}_Wrap_AI_Compatible.svg`;
+        link.download = `${currentShape}_Wrap.svg`;
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
       }
+      
+      function exportAI() {
+        const shape = getCurrentShape();
+        if (!shape) {
+            alert("No shape selected for export.");
+            return;
+        }
+        const svgString = createSVGString();
+        if (!svgString) return;
 
+        const blob = new Blob([svgString], { type: "application/postscript" });
+        const link = document.createElement("a");
+        link.href = URL.createObjectURL(blob);
+        link.download = `${currentShape}_Wrap.ai`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      }
 
       // --- Event Listeners ---
       window.addEventListener("resize", mainDraw);
       fileInput.addEventListener("input", handleImageUpload);
       exportPngBtn.addEventListener("click", exportPNG);
       exportSvgBtn.addEventListener("click", exportSVG);
+      exportAiBtn.addEventListener("click", exportAI);
       shapeTypeSelect.addEventListener("change", handleShapeTypeChange);
       shapeSelect.addEventListener("change", handleShapeChange);
       document.querySelectorAll('input[name="view_type"]').forEach(radio => {
@@ -788,7 +938,7 @@ ${svgContent}
       
       // --- Initialization ---
       function initializeApp() {
-        currentView = document.querySelector('input[name="view_type"]:checked').value;
+        preProcessShapes();
         populateShapeTypes();
         toggleViewSelector();
         updateSpecificShapeSelector();

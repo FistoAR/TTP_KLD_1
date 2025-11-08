@@ -285,7 +285,6 @@
             topIsReversed: false,
             bottomIsReversed: false,
         },
-        // <-- MODIFIED: UPDATED SHAPE DEFINITION -->
         "250ml_sweet_box_te_bottom": {
             type: "sweet_box_te",
             view: "bottom",
@@ -565,15 +564,17 @@
             }
           }
           
-          let adjustedSourceX = i - startOffset;
-          if (isSweetBox) {
-            if (t0 < 0) { adjustedSourceX = 0; } 
-            else if (t0 > 1) { adjustedSourceX = sliceCount - 1; } 
-            else { adjustedSourceX = t0 * sliceCount; }
+          let sourceSliceIndex;
+          if (i < 0) {
+              sourceSliceIndex = 0;
+          } else if (i >= sliceCount) {
+              sourceSliceIndex = sliceCount - 1;
+          } else {
+              sourceSliceIndex = i;
           }
-          
-          const sourceX = Math.max(0, Math.min(adjustedSourceX * sourceSliceWidth, imgWidth - sourceSliceWidth));
 
+          const sourceX = sourceSliceIndex * sourceSliceWidth;
+          
           localCtx.drawImage(
             img,
             sourceX, 0,
@@ -581,6 +582,7 @@
             -(sliceWidth + overlap) / 2, -verticalExtension,
             sliceWidth + overlap, sliceHeight + (verticalExtension * 2)
           );
+
           localCtx.restore();
         }
       }
@@ -619,42 +621,57 @@
           localCtx.setTransform(1, 0, 0, 1, 0, 0);
           
           if (!isExport && window.devicePixelRatio && localCtx === ctx) {
-           localCtx.scale(window.devicePixelRatio, window.devicePixelRatio);
-      }
+          localCtx.scale(window.devicePixelRatio, window.devicePixelRatio);
+          }
 
-      // Check if the shape is a flat die-cut that shouldn't be warped
-      if (shape.type === 'sweet_box_te') {
-    
-    let drawOffsetX = offsetX;
-    let drawOffsetY = offsetY;
-    let drawScaledW = scaledW;
-    let drawScaledH = scaledH;
+          // Add horizontal shift for specific shapes
+          let imageOffsetX = 0;
+          const needsHorizontalShift = [ 
+            '500ml_round', 
+            '750ml_round', 
+            '1000ml_round',
+            '450ml_round_square',
+            '500ml_round_square'
+          ].includes(currentShape);
+          
+          if (needsHorizontalShift) {
+            // Shift right - adjust this value to move more or less (positive = right, negative = left)
+            imageOffsetX = isExport ? 22 : 5; // More shift for export, less for preview
+          }
 
-    // --- MODIFICATION: Add 5% bleed for this specific shape ---
-    if (currentShape === '250ml_sweet_box_te_bottom') {
-      const scaleFactor = 1.029; // 5% larger for bleed
-      drawScaledW = scaledW * scaleFactor;
-      drawScaledH = scaledH * scaleFactor;
-      // Re-center the oversized image so it scales from the middle
-      drawOffsetX = offsetX - (drawScaledW - scaledW) / 2;
-      drawOffsetY = offsetY - (drawScaledH - scaledH) / 2;
-   }
-    // --- END MODIFICATION ---
+          // Check if the shape is flat (rectangle, top-view, or te-box) and should not be warped
+          if (shape.type === 'rectangle' || shape.view === 'top' || shape.type === 'sweet_box_te') {
+        
+            let drawOffsetX = offsetX + imageOffsetX;
+            let drawOffsetY = offsetY;
+            let drawScaledW = scaledW;
+            let drawScaledH = scaledH;
 
-    localCtx.drawImage(
-      currentImage, 
-      drawOffsetX, 
-      drawOffsetY, 
-      drawScaledW, 
-      drawScaledH
-    );
-   } else {
-        // For all other shapes, use the original warp logic
-        const heightAdjust = 1.0;
-        drawWarp(localCtx, currentImage, shape, offsetX, offsetY, finalScale, isExport, heightAdjust);
-      }
+            // --- MODIFICATION: Add bleed for this specific shape ---
+            if (currentShape === '250ml_sweet_box_te_bottom') {
+              const scaleFactor = 1.029;
+              drawScaledW = scaledW * scaleFactor;
+              drawScaledH = scaledH * scaleFactor;
+              // Re-center the oversized image so it scales from the middle
+              drawOffsetX = offsetX - (drawScaledW - scaledW) / 2 + imageOffsetX;
+              drawOffsetY = offsetY - (drawScaledH - scaledH) / 2;
+            }
+            // --- END MODIFICATION ---
 
-      localCtx.restore();
+            localCtx.drawImage(
+              currentImage, 
+              drawOffsetX, 
+              drawOffsetY, 
+              drawScaledW, 
+              drawScaledH
+            );
+          } else {
+                // For all other shapes, use the original perspective warp logic with offset
+                const heightAdjust = 1.0;
+                drawWarp(localCtx, currentImage, shape, offsetX + imageOffsetX, offsetY, finalScale, isExport, heightAdjust);
+              }
+
+          localCtx.restore();
 
         } else {
           localCtx.save();

@@ -1,0 +1,804 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>3D Model Viewer – Auto Materials & Texture Upload</title>
+
+    <!-- model-viewer -->
+    <script
+      type="module"
+      src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.3.0/model-viewer.min.js"
+    ></script>
+
+    <style>
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+          Roboto, sans-serif;
+        background: #0f172a;
+        color: #e5e7eb;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 100vh;
+      }
+      .wrapper {
+        width: 100%;
+        max-width: 1000px;
+        padding: 16px;
+      }
+      h1 {
+        font-size: 20px;
+        margin: 0 0 12px;
+        color: #f1f5f9;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+      h1 .badge {
+        font-size: 11px;
+        background: #3b82f6;
+        padding: 3px 8px;
+        border-radius: 4px;
+        font-weight: 500;
+      }
+      #viewerContainer {
+        border-radius: 12px;
+        overflow: hidden;
+        border: 1px solid rgba(148, 163, 184, 0.5);
+        background: radial-gradient(circle at top, #1f2937, #020617);
+        position: relative;
+      }
+      model-viewer {
+        width: 100%;
+        height: 480px;
+        --poster-color: transparent;
+        background: transparent;
+      }
+      .loading-overlay {
+        position: absolute;
+        inset: 0;
+        background: rgba(2, 6, 23, 0.85);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-direction: column;
+        gap: 12px;
+        font-size: 14px;
+        color: #94a3b8;
+        z-index: 10;
+        transition: opacity 0.3s;
+      }
+      .loading-overlay.hidden {
+        opacity: 0;
+        pointer-events: none;
+      }
+      .spinner {
+        width: 36px;
+        height: 36px;
+        border: 3px solid #334155;
+        border-top-color: #3b82f6;
+        border-radius: 50%;
+        animation: spin 0.8s linear infinite;
+      }
+      @keyframes spin {
+        to {
+          transform: rotate(360deg);
+        }
+      }
+
+      .controls {
+        margin-top: 14px;
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 12px;
+      }
+      .control-group {
+        background: #111827;
+        padding: 12px;
+        border-radius: 8px;
+        border: 1px solid #374151;
+      }
+      .control-group label {
+        font-size: 12px;
+        color: #9ca3af;
+        display: block;
+        margin-bottom: 6px;
+      }
+      input[type="file"] {
+        width: 100%;
+        padding: 8px;
+        border-radius: 6px;
+        border: 1px dashed #4b5563;
+        background: #1f2937;
+        color: #e5e7eb;
+        font-size: 13px;
+        cursor: pointer;
+      }
+      input[type="file"]:hover {
+        border-color: #3b82f6;
+        background: #1e3a5f;
+      }
+      select,
+      input[type="range"] {
+        width: 100%;
+        padding: 8px 10px;
+        border-radius: 6px;
+        border: 1px solid #4b5563;
+        background: #1f2937;
+        color: #e5e7eb;
+        font-size: 13px;
+      }
+      select:focus,
+      input:focus {
+        outline: none;
+        border-color: #3b82f6;
+      }
+      .range-row {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+      .range-row input[type="range"] {
+        flex: 1;
+      }
+      .range-value {
+        font-size: 12px;
+        color: #60a5fa;
+        min-width: 36px;
+        text-align: right;
+      }
+
+      .status {
+        margin-top: 10px;
+        padding: 10px 14px;
+        font-size: 13px;
+        border-radius: 8px;
+        background: #1e293b;
+        border-left: 4px solid #3b82f6;
+        min-height: 1.2em;
+      }
+      .status.error {
+        border-left-color: #ef4444;
+        color: #fca5a5;
+      }
+      .status.success {
+        border-left-color: #22c55e;
+        color: #86efac;
+      }
+
+      /* Material info panel */
+      .material-info {
+        margin-top: 12px;
+        padding: 12px;
+        background: #111827;
+        border-radius: 8px;
+        border: 1px solid #374151;
+        font-size: 12px;
+      }
+      .material-info h3 {
+        margin: 0 0 8px;
+        font-size: 13px;
+        color: #60a5fa;
+      }
+      .material-info ul {
+        margin: 0;
+        padding-left: 18px;
+        color: #9ca3af;
+      }
+      .material-info li {
+        margin-bottom: 4px;
+      }
+      .material-info li.current {
+        color: #22c55e;
+        font-weight: 600;
+      }
+
+      /* Sticker preview */
+      .sticker-bar {
+        margin-top: 14px;
+        padding: 12px;
+        border-radius: 10px;
+        border: 1px solid rgba(148, 163, 184, 0.35);
+        background: #111827;
+        display: flex;
+        align-items: center;
+        gap: 14px;
+      }
+      .sticker-label {
+        font-size: 13px;
+        color: #cbd5e1;
+        white-space: nowrap;
+      }
+      .sticker-box {
+        flex: 1;
+        min-height: 90px;
+        max-height: 120px;
+        border-radius: 8px;
+        background: #0b1120;
+        border: 1px dashed rgba(148, 163, 184, 0.4);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        overflow: hidden;
+        padding: 8px;
+      }
+      .sticker-box.empty::before {
+        content: "No texture uploaded yet";
+        font-size: 12px;
+        color: #6b7280;
+      }
+      #stickerImg {
+        max-width: 100%;
+        max-height: 100%;
+        display: none;
+        object-fit: contain;
+        border-radius: 4px;
+      }
+      .sticker-box.has-image #stickerImg {
+        display: block;
+      }
+
+      /* Buttons */
+      .btn {
+        padding: 8px 16px;
+        border-radius: 6px;
+        border: none;
+        font-size: 13px;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.2s;
+      }
+      .btn-primary {
+        background: #3b82f6;
+        color: white;
+      }
+      .btn-primary:hover {
+        background: #2563eb;
+      }
+      .btn-secondary {
+        background: #374151;
+        color: #e5e7eb;
+      }
+      .btn-secondary:hover {
+        background: #4b5563;
+      }
+      .btn-row {
+        display: flex;
+        gap: 8px;
+        margin-top: 10px;
+      }
+    </style>
+  </head>
+
+  <body>
+    <div class="wrapper">
+      <h1>
+        🎨 3D Texture Viewer
+        <span class="badge">Auto Materials</span>
+      </h1>
+
+      <div id="viewerContainer">
+        <div id="loadingOverlay" class="loading-overlay">
+          <div class="spinner"></div>
+          <span>Loading 3D model...</span>
+        </div>
+
+        <model-viewer
+          id="mainViewer"
+          src="./assets/models/logo_250_ml_round.glb"
+          alt="3D Container"
+          camera-controls
+          auto-rotate
+          rotation-per-second="30deg"
+          exposure="1.0"
+          shadow-intensity="1"
+          environment-image="neutral"
+          interaction-prompt="none"
+        >
+        </model-viewer>
+      </div>
+
+      <div class="controls">
+        <div class="control-group">
+          <label>📁 Upload Texture Image</label>
+          <input
+            type="file"
+            id="textureUpload"
+            accept="image/png,image/jpeg,image/webp,image/svg+xml"
+          />
+        </div>
+
+        <div class="control-group">
+          <label>🎯 Target Material (auto-detected)</label>
+          <select id="materialSelect">
+            <option value="">-- Loading materials... --</option>
+          </select>
+        </div>
+
+        <div class="control-group">
+          <label>🔄 Texture Wrap Mode</label>
+          <select id="wrapModeSelect">
+            <option value="REPEAT">Repeat</option>
+            <option value="CLAMP_TO_EDGE">Clamp to Edge</option>
+            <option value="MIRRORED_REPEAT">Mirrored Repeat</option>
+          </select>
+        </div>
+
+        <div class="control-group">
+          <label>🔧 Metallic Factor</label>
+          <div class="range-row">
+            <input
+              type="range"
+              id="metallicRange"
+              min="0"
+              max="1"
+              step="0.05"
+              value="0"
+            />
+            <span id="metallicValue" class="range-value">0.00</span>
+          </div>
+        </div>
+
+        <div class="control-group">
+          <label>🌫️ Roughness Factor</label>
+          <div class="range-row">
+            <input
+              type="range"
+              id="roughnessRange"
+              min="0"
+              max="1"
+              step="0.05"
+              value="0.5"
+            />
+            <span id="roughnessValue" class="range-value">0.50</span>
+          </div>
+        </div>
+
+        <div class="control-group">
+          <label>☀️ Exposure</label>
+          <div class="range-row">
+            <input
+              type="range"
+              id="exposureRange"
+              min="0.1"
+              max="2"
+              step="0.1"
+              value="1"
+            />
+            <span id="exposureValue" class="range-value">1.0</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="btn-row">
+        <button id="applyBtn" class="btn btn-primary" disabled>
+          ✨ Apply Texture
+        </button>
+        <button id="resetBtn" class="btn btn-secondary">🔄 Reset Material</button>
+        <button id="refreshMaterialsBtn" class="btn btn-secondary">
+          📋 Refresh Materials
+        </button>
+      </div>
+
+      <div id="status" class="status">Waiting for model to load...</div>
+
+      <div id="materialInfo" class="material-info" style="display: none">
+        <h3>📦 Available Materials</h3>
+        <ul id="materialList"></ul>
+      </div>
+
+      <div class="sticker-bar">
+        <div class="sticker-label">🖼️ Uploaded texture:</div>
+        <div id="stickerBox" class="sticker-box empty">
+          <img id="stickerImg" alt="Texture preview" />
+        </div>
+      </div>
+    </div>
+
+    <script type="module">
+      /********** ELEMENTS **********/
+      const mainViewer = document.getElementById("mainViewer");
+      const loadingOverlay = document.getElementById("loadingOverlay");
+      const textureUpload = document.getElementById("textureUpload");
+      const materialSelect = document.getElementById("materialSelect");
+      const wrapModeSelect = document.getElementById("wrapModeSelect");
+      const statusEl = document.getElementById("status");
+      const materialInfo = document.getElementById("materialInfo");
+      const materialList = document.getElementById("materialList");
+
+      const metallicRange = document.getElementById("metallicRange");
+      const metallicValue = document.getElementById("metallicValue");
+      const roughnessRange = document.getElementById("roughnessRange");
+      const roughnessValue = document.getElementById("roughnessValue");
+      const exposureRange = document.getElementById("exposureRange");
+      const exposureValue = document.getElementById("exposureValue");
+
+      const applyBtn = document.getElementById("applyBtn");
+      const resetBtn = document.getElementById("resetBtn");
+      const refreshMaterialsBtn = document.getElementById("refreshMaterialsBtn");
+
+      const stickerBox = document.getElementById("stickerBox");
+      const stickerImg = document.getElementById("stickerImg");
+
+      let currentTextureDataUrl = null;
+      let originalMaterialStates = new Map();
+
+      /********** HELPERS **********/
+      function setStatus(message, type = "info") {
+        statusEl.textContent = message;
+        statusEl.className = "status";
+        if (type === "error") statusEl.classList.add("error");
+        if (type === "success") statusEl.classList.add("success");
+      }
+
+      async function ensureModelLoaded(viewer) {
+        if (viewer.model) return;
+        await new Promise((res) =>
+          viewer.addEventListener("load", res, { once: true })
+        );
+      }
+
+      function showStickerPreview(dataUrl) {
+        if (!dataUrl) {
+          stickerImg.src = "";
+          stickerBox.classList.remove("has-image");
+          stickerBox.classList.add("empty");
+          return;
+        }
+        stickerImg.src = dataUrl;
+        stickerBox.classList.add("has-image");
+        stickerBox.classList.remove("empty");
+      }
+
+      /********** AUTO-FETCH MATERIALS **********/
+      function populateMaterialsDropdown() {
+        if (!mainViewer.model) {
+          setStatus("Model not loaded yet.", "error");
+          return;
+        }
+
+        const materials = mainViewer.model.materials;
+        materialSelect.innerHTML = "";
+
+        if (!materials || materials.length === 0) {
+          const opt = document.createElement("option");
+          opt.value = "";
+          opt.textContent = "-- No materials found --";
+          materialSelect.appendChild(opt);
+          setStatus("No materials found in the model.", "error");
+          return;
+        }
+
+        // Populate dropdown
+        materials.forEach((mat, index) => {
+          const opt = document.createElement("option");
+          opt.value = mat.name || `Material_${index}`;
+          opt.textContent = `${mat.name || `Material_${index}`}`;
+          materialSelect.appendChild(opt);
+
+          // Store original state for reset
+          storeOriginalMaterialState(mat);
+        });
+
+        // Update material info panel
+        updateMaterialInfoPanel(materials);
+
+        setStatus(
+          `Found ${materials.length} material(s). Select one and upload a texture.`,
+          "success"
+        );
+        applyBtn.disabled = !currentTextureDataUrl;
+      }
+
+      function storeOriginalMaterialState(mat) {
+        try {
+          const pbr = mat.pbrMetallicRoughness;
+          originalMaterialStates.set(mat.name, {
+            baseColorFactor: pbr.baseColorFactor
+              ? [...pbr.baseColorFactor]
+              : [1, 1, 1, 1],
+            metallicFactor: pbr.metallicFactor ?? 0,
+            roughnessFactor: pbr.roughnessFactor ?? 0.5,
+            hasTexture: !!pbr.baseColorTexture?.texture,
+          });
+        } catch (e) {
+          console.warn("Could not store original state for", mat.name);
+        }
+      }
+
+      function updateMaterialInfoPanel(materials) {
+        materialInfo.style.display = "block";
+        materialList.innerHTML = "";
+
+        materials.forEach((mat, index) => {
+          const li = document.createElement("li");
+          const pbr = mat.pbrMetallicRoughness;
+          const hasTexture = pbr?.baseColorTexture?.texture ? "✅" : "❌";
+          li.textContent = `${mat.name || `Material_${index}`} ${hasTexture} texture`;
+          if (mat.name === materialSelect.value) {
+            li.classList.add("current");
+          }
+          materialList.appendChild(li);
+        });
+      }
+
+      /********** IMPROVED TEXTURE APPLICATION **********/
+      async function applyMaterialTexture(viewer, materialName, textureUrl) {
+        if (!viewer.model) {
+          throw new Error("Model not loaded");
+        }
+        if (!textureUrl) {
+          throw new Error("No texture URL provided");
+        }
+
+        // Find material
+        const mat = viewer.model.materials.find(
+          (m) => m.name === materialName
+        );
+        if (!mat) {
+          throw new Error(`Material "${materialName}" not found`);
+        }
+
+        setStatus(`Creating texture for "${materialName}"...`);
+
+        try {
+          // Create texture from data URL
+          const texture = await viewer.createTexture(textureUrl);
+
+          if (!texture) {
+            throw new Error("Failed to create texture object");
+          }
+
+          // Get PBR metallic roughness
+          const pbr = mat.pbrMetallicRoughness;
+
+          // Apply base color texture
+          if (pbr.baseColorTexture) {
+            pbr.baseColorTexture.setTexture(texture);
+          } else {
+            // If no baseColorTexture exists, try setting it directly
+            pbr["baseColorTexture"] = { setTexture: () => {} };
+            pbr.baseColorTexture.setTexture(texture);
+          }
+
+          // Apply wrap mode
+          applyWrapMode(pbr, wrapModeSelect.value);
+
+          // Apply metallic/roughness settings
+          pbr.setMetallicFactor(parseFloat(metallicRange.value));
+          pbr.setRoughnessFactor(parseFloat(roughnessRange.value));
+
+          // Ensure color factor is white so texture shows properly
+          pbr.setBaseColorFactor([1, 1, 1, 1]);
+
+          // Update material info panel
+          updateMaterialInfoPanel(viewer.model.materials);
+
+          setStatus(
+            `✅ Texture applied to "${materialName}" successfully!`,
+            "success"
+          );
+          return true;
+        } catch (err) {
+          console.error("Texture application error:", err);
+          throw err;
+        }
+      }
+
+      function applyWrapMode(pbr, mode) {
+        try {
+          const texInfo = pbr.baseColorTexture;
+          if (
+            texInfo?.texture?.sampler &&
+            typeof texInfo.texture.sampler.setWrapS === "function"
+          ) {
+            // model-viewer uses WebGL constants internally
+            const wrapModes = {
+              REPEAT: 10497,
+              CLAMP_TO_EDGE: 33071,
+              MIRRORED_REPEAT: 33648,
+            };
+            const wrapValue = wrapModes[mode] || wrapModes.REPEAT;
+
+            texInfo.texture.sampler.setWrapS(wrapValue);
+            texInfo.texture.sampler.setWrapT(wrapValue);
+          } else if (
+            texInfo?.texture?.sampler &&
+            typeof texInfo.texture.sampler.setWrapMode === "function"
+          ) {
+            texInfo.texture.sampler.setWrapMode(mode);
+          }
+        } catch (e) {
+          console.warn("Could not set wrap mode:", e);
+        }
+      }
+
+      /********** RESET MATERIAL **********/
+      async function resetMaterial(materialName) {
+        if (!mainViewer.model) return;
+
+        const mat = mainViewer.model.materials.find(
+          (m) => m.name === materialName
+        );
+        if (!mat) return;
+
+        const original = originalMaterialStates.get(materialName);
+        if (!original) return;
+
+        try {
+          const pbr = mat.pbrMetallicRoughness;
+          pbr.setBaseColorFactor(original.baseColorFactor);
+          pbr.setMetallicFactor(original.metallicFactor);
+          pbr.setRoughnessFactor(original.roughnessFactor);
+
+          // Update sliders
+          metallicRange.value = original.metallicFactor;
+          metallicValue.textContent = original.metallicFactor.toFixed(2);
+          roughnessRange.value = original.roughnessFactor;
+          roughnessValue.textContent = original.roughnessFactor.toFixed(2);
+
+          setStatus(`Material "${materialName}" reset to original state.`, "success");
+        } catch (e) {
+          console.error("Reset error:", e);
+          setStatus("Failed to reset material.", "error");
+        }
+      }
+
+      /********** EVENT LISTENERS **********/
+
+      // Model loaded
+      mainViewer.addEventListener("load", () => {
+        loadingOverlay.classList.add("hidden");
+        populateMaterialsDropdown();
+
+        // Reapply texture if one was already uploaded
+        if (currentTextureDataUrl && materialSelect.value) {
+          applyMaterialTexture(
+            mainViewer,
+            materialSelect.value,
+            currentTextureDataUrl
+          ).catch(console.error);
+        }
+      });
+
+      // Model loading progress
+      mainViewer.addEventListener("progress", (e) => {
+        const percent = Math.round(e.detail.totalProgress * 100);
+        loadingOverlay.querySelector("span").textContent = `Loading... ${percent}%`;
+      });
+
+      // File upload
+      textureUpload.addEventListener("change", (e) => {
+        const file = e.target.files?.[0];
+        if (!file) {
+          currentTextureDataUrl = null;
+          setStatus("No file selected.");
+          showStickerPreview(null);
+          applyBtn.disabled = true;
+          return;
+        }
+
+        // Validate file type
+        const validTypes = ["image/png", "image/jpeg", "image/webp", "image/svg+xml"];
+        if (!validTypes.includes(file.type)) {
+          setStatus("Invalid file type. Use PNG, JPEG, WebP, or SVG.", "error");
+          return;
+        }
+
+        const reader = new FileReader();
+        reader.onload = async (ev) => {
+          currentTextureDataUrl = ev.target.result;
+          showStickerPreview(currentTextureDataUrl);
+          applyBtn.disabled = false;
+          setStatus(
+            `Texture "${file.name}" loaded. Click Apply to use it.`,
+            "success"
+          );
+        };
+        reader.onerror = () => {
+          setStatus("Failed to read file.", "error");
+        };
+        reader.readAsDataURL(file);
+      });
+
+      // Apply button
+      applyBtn.addEventListener("click", async () => {
+        if (!currentTextureDataUrl || !materialSelect.value) {
+          setStatus("Please upload a texture and select a material.", "error");
+          return;
+        }
+
+        applyBtn.disabled = true;
+        applyBtn.textContent = "⏳ Applying...";
+
+        try {
+          await ensureModelLoaded(mainViewer);
+          await applyMaterialTexture(
+            mainViewer,
+            materialSelect.value,
+            currentTextureDataUrl
+          );
+        } catch (err) {
+          console.error(err);
+          setStatus(`Error: ${err.message}`, "error");
+        } finally {
+          applyBtn.disabled = false;
+          applyBtn.textContent = "✨ Apply Texture";
+        }
+      });
+
+      // Reset button
+      resetBtn.addEventListener("click", () => {
+        if (materialSelect.value) {
+          resetMaterial(materialSelect.value);
+        }
+      });
+
+      // Refresh materials button
+      refreshMaterialsBtn.addEventListener("click", () => {
+        populateMaterialsDropdown();
+      });
+
+      // Material selection change
+      materialSelect.addEventListener("change", () => {
+        updateMaterialInfoPanel(mainViewer.model?.materials || []);
+
+        // Load current material settings into sliders
+        const mat = mainViewer.model?.materials.find(
+          (m) => m.name === materialSelect.value
+        );
+        if (mat) {
+          const pbr = mat.pbrMetallicRoughness;
+          metallicRange.value = pbr.metallicFactor ?? 0;
+          metallicValue.textContent = (pbr.metallicFactor ?? 0).toFixed(2);
+          roughnessRange.value = pbr.roughnessFactor ?? 0.5;
+          roughnessValue.textContent = (pbr.roughnessFactor ?? 0.5).toFixed(2);
+        }
+      });
+
+      // Range sliders
+      metallicRange.addEventListener("input", (e) => {
+        metallicValue.textContent = parseFloat(e.target.value).toFixed(2);
+      });
+
+      roughnessRange.addEventListener("input", (e) => {
+        roughnessValue.textContent = parseFloat(e.target.value).toFixed(2);
+      });
+
+      exposureRange.addEventListener("input", (e) => {
+        const val = parseFloat(e.target.value);
+        exposureValue.textContent = val.toFixed(1);
+        mainViewer.exposure = val;
+      });
+
+      // Live update metallic/roughness on current material
+      metallicRange.addEventListener("change", () => {
+        if (!mainViewer.model || !materialSelect.value) return;
+        const mat = mainViewer.model.materials.find(
+          (m) => m.name === materialSelect.value
+        );
+        if (mat) {
+          mat.pbrMetallicRoughness.setMetallicFactor(
+            parseFloat(metallicRange.value)
+          );
+        }
+      });
+
+      roughnessRange.addEventListener("change", () => {
+        if (!mainViewer.model || !materialSelect.value) return;
+        const mat = mainViewer.model.materials.find(
+          (m) => m.name === materialSelect.value
+        );
+        if (mat) {
+          mat.pbrMetallicRoughness.setRoughnessFactor(
+            parseFloat(roughnessRange.value)
+          );
+        }
+      });
+    </script>
+  </body>
+</html>

@@ -1,165 +1,631 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>Curve Creator with PNG Export</title>
-  <style>
-    body {
-      background-color: #111;
-      color: white;
-      font-family: Arial, sans-serif;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      padding: 40px;
-    }
-
-    canvas {
-      background-color: #222;
-      border: 2px solid #444;
-      margin-top: 20px;
-    }
-
-    label {
-      margin-top: 20px;
-    }
-
-    input[type="range"] {
-      width: 300px;
-    }
-
-    .value {
-      font-weight: bold;
-      color: #0f0;
-    }
-
-    .controls {
-      margin-top: 20px;
-      text-align: center;
-    }
-
-    .controls div {
-      margin-bottom: 15px;
-    }
-
-    button {
-      background-color: #4CAF50;
-      color: white;
-      padding: 10px 20px;
-      border: none;
-      cursor: pointer;
-      font-size: 16px;
-      margin-top: 20px;
-    }
-
-    button:hover {
-      background-color: #45a049;
-    }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Image Upscaler - Clear Zoom</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            min-height: 100vh;
+        }
+        .glass {
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.1);
+            backdrop-filter: blur(10px);
+        }
+        .checker {
+            background: repeating-conic-gradient(#fff 0% 25%, #e5e5e5 0% 50%) 50%/16px 16px;
+        }
+        .dropzone.drag { 
+            border-color: #06b6d4 !important; 
+            background: rgba(6,182,212,0.1) !important;
+            transform: scale(1.02);
+        }
+        .spin { animation: spin 1s linear infinite; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        
+        .zoom-container {
+            overflow: auto;
+            cursor: grab;
+        }
+        .zoom-container:active {
+            cursor: grabbing;
+        }
+        .zoom-container img {
+            image-rendering: auto;
+        }
+        .pixelated img {
+            image-rendering: pixelated;
+        }
+    </style>
 </head>
-<body>
+<body class="text-white p-4 md:p-8">
 
-  <h2>Curve Shape Creator with PNG Export</h2>
+    <div class="max-w-5xl mx-auto">
+        
+        <!-- Header -->
+        <header class="text-center mb-8">
+            <h1 class="text-4xl md:text-5xl font-black mb-2 bg-gradient-to-r from-pink-400 via-purple-400 to-indigo-500 bg-clip-text text-transparent">
+                Image Upscaler
+            </h1>
+            <p class="text-white/50">Upload → Enhance → Download in high resolution</p>
+        </header>
 
-  <div class="controls">
-    <div>
-      <label for="top-width">Top Width: 
-        <span id="top-width-value" class="value">295.91</span> mm
-      </label>
-      <input type="range" id="top-width" min="50" max="500" value="295.91">
+        <!-- Upload Section -->
+        <div id="uploadSection" class="glass rounded-2xl p-8">
+            <div id="dropzone" class="dropzone rounded-xl p-12 text-center cursor-pointer border-2 border-dashed border-white/20 hover:border-purple-400 transition-all duration-300">
+                <div class="text-6xl mb-4">🖼️</div>
+                <h2 class="text-2xl font-bold mb-2">Drop Image Here</h2>
+                <p class="text-white/40 mb-4">PNG, JPG, WebP supported</p>
+                <span class="inline-block px-6 py-3 bg-gradient-to-r from-purple-500 to-indigo-500 rounded-xl font-bold hover:opacity-90 transition">
+                    Select Image
+                </span>
+            </div>
+            <input type="file" id="fileInput" accept="image/*" class="hidden">
+        </div>
+
+        <!-- Processing -->
+        <div id="processSection" class="hidden glass rounded-2xl p-10 text-center">
+            <div class="w-16 h-16 border-4 border-purple-500/30 border-t-purple-500 rounded-full spin mx-auto mb-4"></div>
+            <h2 id="processStatus" class="text-xl font-bold mb-2">Processing...</h2>
+            <p id="processDetail" class="text-white/40 text-sm">Enhancing your image</p>
+        </div>
+
+        <!-- Result Section -->
+        <div id="resultSection" class="hidden">
+            
+            <!-- Info Bar -->
+            <div class="glass rounded-2xl p-4 mb-6 flex flex-wrap items-center justify-between gap-4">
+                <div class="flex items-center gap-4">
+                    <span class="text-white/50">Original:</span>
+                    <span id="origInfo" class="font-bold text-purple-400"></span>
+                </div>
+                <button onclick="reset()" class="px-4 py-2 bg-white/10 hover:bg-white/20 rounded-lg transition">
+                    ← New Image
+                </button>
+            </div>
+
+            <!-- Comparison View -->
+            <div class="glass rounded-2xl p-5 mb-6">
+                <div class="flex flex-wrap items-center justify-between gap-4 mb-4">
+                    <h3 class="font-bold text-lg flex items-center gap-2">
+                        🔍 Zoom Comparison
+                    </h3>
+                    <div class="flex items-center gap-2 flex-wrap">
+                        <span class="text-white/40 text-sm">Zoom:</span>
+                        <button onclick="setZoom(100)" class="zoom-btn px-3 py-1.5 bg-white/10 rounded-lg text-sm hover:bg-white/20 transition" data-zoom="100">100%</button>
+                        <button onclick="setZoom(200)" class="zoom-btn px-3 py-1.5 bg-white/10 rounded-lg text-sm hover:bg-white/20 transition" data-zoom="200">200%</button>
+                        <button onclick="setZoom(400)" class="zoom-btn px-3 py-1.5 bg-purple-500/30 rounded-lg text-sm hover:bg-purple-500/50 transition" data-zoom="400">400%</button>
+                        <button onclick="setZoom(800)" class="zoom-btn px-3 py-1.5 bg-white/10 rounded-lg text-sm hover:bg-white/20 transition" data-zoom="800">800%</button>
+                    </div>
+                </div>
+                
+                <div class="grid md:grid-cols-2 gap-4">
+                    <!-- Original (Pixelated) -->
+                    <div class="bg-black/30 rounded-xl overflow-hidden">
+                        <div class="py-2 px-4 border-b border-white/10 flex justify-between items-center">
+                            <span class="text-white/60 text-sm font-medium">Original</span>
+                            <span class="text-red-400 text-xs">😕 Pixelated when zoomed</span>
+                        </div>
+                        <div id="zoomOriginal" class="zoom-container h-64 checker pixelated"></div>
+                    </div>
+                    
+                    <!-- Upscaled (Clear) -->
+                    <div class="bg-black/30 rounded-xl overflow-hidden ring-2 ring-emerald-500/30">
+                        <div class="py-2 px-4 border-b border-white/10 flex justify-between items-center">
+                            <span class="text-emerald-400 text-sm font-medium">Upscaled</span>
+                            <span class="text-emerald-400 text-xs">✨ Clear & Sharp</span>
+                        </div>
+                        <div id="zoomUpscaled" class="zoom-container h-64 checker"></div>
+                    </div>
+                </div>
+                
+                <p class="text-center text-white/30 text-xs mt-3">Drag to pan • Compare the difference at high zoom!</p>
+            </div>
+
+            <!-- Enhancement Options -->
+            <div class="glass rounded-2xl p-5 mb-6">
+                <h3 class="font-bold text-lg mb-4">⚙️ Enhancement Settings</h3>
+                <div class="grid sm:grid-cols-2 md:grid-cols-4 gap-4">
+                    <div>
+                        <label class="text-white/60 text-sm block mb-2">Sharpness</label>
+                        <input type="range" id="sharpness" min="0" max="100" value="30" 
+                               class="w-full accent-purple-500" onchange="reprocess()">
+                        <div class="flex justify-between text-xs text-white/40 mt-1">
+                            <span>Soft</span>
+                            <span id="sharpnessVal">30%</span>
+                            <span>Sharp</span>
+                        </div>
+                    </div>
+                    <div>
+                        <label class="text-white/60 text-sm block mb-2">Smoothing</label>
+                        <input type="range" id="smoothing" min="0" max="100" value="50" 
+                               class="w-full accent-purple-500" onchange="reprocess()">
+                        <div class="flex justify-between text-xs text-white/40 mt-1">
+                            <span>None</span>
+                            <span id="smoothingVal">50%</span>
+                            <span>Max</span>
+                        </div>
+                    </div>
+                    <div>
+                        <label class="text-white/60 text-sm block mb-2">Denoise</label>
+                        <input type="range" id="denoise" min="0" max="100" value="20" 
+                               class="w-full accent-purple-500" onchange="reprocess()">
+                        <div class="flex justify-between text-xs text-white/40 mt-1">
+                            <span>Off</span>
+                            <span id="denoiseVal">20%</span>
+                            <span>Max</span>
+                        </div>
+                    </div>
+                    <div>
+                        <label class="text-white/60 text-sm block mb-2">Algorithm</label>
+                        <select id="algorithm" class="w-full bg-white/10 border border-white/20 rounded-lg px-3 py-2 text-sm" onchange="reprocess()">
+                            <option value="bicubic">Bicubic (Smooth)</option>
+                            <option value="lanczos">Lanczos (Sharp)</option>
+                            <option value="bilinear">Bilinear (Fast)</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Download Options -->
+            <div class="glass rounded-2xl p-6 mb-6">
+                <h3 class="font-bold text-lg text-center mb-5">💾 Download Upscaled Image</h3>
+                <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3">
+                    <button onclick="downloadUpscaled(1)" class="p-4 bg-gray-500/20 hover:bg-gray-500/30 rounded-xl border border-gray-500/30 transition-all flex flex-col items-center group">
+                        <span class="text-2xl mb-1 group-hover:scale-110 transition">📄</span>
+                        <span class="font-bold text-sm">1x</span>
+                        <span id="size1x" class="text-xs text-white/40"></span>
+                    </button>
+                    <button onclick="downloadUpscaled(2)" class="p-4 bg-blue-500/20 hover:bg-blue-500/30 rounded-xl border border-blue-500/30 transition-all flex flex-col items-center group">
+                        <span class="text-2xl mb-1 group-hover:scale-110 transition">🖼️</span>
+                        <span class="font-bold text-sm">2x</span>
+                        <span id="size2x" class="text-xs text-white/40"></span>
+                    </button>
+                    <button onclick="downloadUpscaled(4)" class="p-4 bg-purple-500/20 hover:bg-purple-500/30 rounded-xl border border-purple-500/30 transition-all flex flex-col items-center group">
+                        <span class="text-2xl mb-1 group-hover:scale-110 transition">🚀</span>
+                        <span class="font-bold text-sm">4x</span>
+                        <span id="size4x" class="text-xs text-white/40"></span>
+                    </button>
+                    <button onclick="downloadUpscaled(8)" class="p-4 bg-pink-500/20 hover:bg-pink-500/30 rounded-xl border border-pink-500/30 transition-all flex flex-col items-center group">
+                        <span class="text-2xl mb-1 group-hover:scale-110 transition">💎</span>
+                        <span class="font-bold text-sm">8x</span>
+                        <span id="size8x" class="text-xs text-white/40"></span>
+                    </button>
+                    <button onclick="downloadUpscaled(16)" class="p-4 bg-orange-500/20 hover:bg-orange-500/30 rounded-xl border border-orange-500/30 transition-all flex flex-col items-center group">
+                        <span class="text-2xl mb-1 group-hover:scale-110 transition">👑</span>
+                        <span class="font-bold text-sm">16x</span>
+                        <span id="size16x" class="text-xs text-white/40"></span>
+                    </button>
+                    <button onclick="downloadUpscaled(32)" class="p-4 bg-emerald-500/20 hover:bg-emerald-500/30 rounded-xl border border-emerald-500/30 transition-all flex flex-col items-center group">
+                        <span class="text-2xl mb-1 group-hover:scale-110 transition">🏆</span>
+                        <span class="font-bold text-sm">32x</span>
+                        <span id="size32x" class="text-xs text-white/40"></span>
+                    </button>
+                </div>
+                <p class="text-center text-white/30 text-xs mt-4">Higher = larger file size but clearer when zoomed</p>
+            </div>
+        </div>
     </div>
-    <div>
-      <label for="bottom-width">Bottom Width: 
-        <span id="bottom-width-value" class="value">245.14</span> mm
-      </label>
-      <input type="range" id="bottom-width" min="50" max="500" value="245.14">
-    </div>
-    <div>
-      <label for="thickness">Thickness (fixed 37 mm): 
-        <span class="value">37</span> mm
-      </label>
-    </div>
-  </div>
 
-  <canvas id="curveCanvas" width="1200" height="1200"></canvas>
+    <!-- Toast -->
+    <div id="toast" class="fixed bottom-6 left-1/2 -translate-x-1/2 px-6 py-3 rounded-xl font-bold transform translate-y-20 opacity-0 transition-all duration-300 z-50"></div>
 
-  <button id="downloadBtn">Download as PNG</button>
+    <script>
+        // ============================================
+        // IMAGE UPSCALER
+        // ============================================
 
-  <script>
-    const MM_TO_PX = 3.78; // 1 mm ≈ 3.78 px at 96 DPI
-    const FIXED_THICKNESS_MM = 37.92; // Fixed thickness value
+        let originalImage = null;
+        let originalDataURL = '';
+        let fileName = 'upscaled';
+        let origWidth = 0, origHeight = 0;
+        let currentZoom = 400;
+        let processedCanvas = null;
 
-    const canvas = document.getElementById("curveCanvas");
-    const ctx = canvas.getContext("2d");
-    const topWidthSlider = document.getElementById("top-width");
-    const bottomWidthSlider = document.getElementById("bottom-width");
-    const topWidthValue = document.getElementById("top-width-value");
-    const bottomWidthValue = document.getElementById("bottom-width-value");
-    const downloadBtn = document.getElementById("downloadBtn");
+        // DOM Elements
+        const dropzone = document.getElementById('dropzone');
+        const fileInput = document.getElementById('fileInput');
+        const uploadSection = document.getElementById('uploadSection');
+        const processSection = document.getElementById('processSection');
+        const resultSection = document.getElementById('resultSection');
 
-    const centerX = canvas.width / 2;
-    const centerY = canvas.height / 2;
+        // ============================================
+        // EVENT LISTENERS
+        // ============================================
 
-    // Function to draw the curve based on the top and bottom widths
-    function drawCurve(topWidthMM, bottomWidthMM) {
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
+        dropzone.addEventListener('click', () => fileInput.click());
+        
+        dropzone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            dropzone.classList.add('drag');
+        });
+        
+        dropzone.addEventListener('dragleave', () => {
+            dropzone.classList.remove('drag');
+        });
+        
+        dropzone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropzone.classList.remove('drag');
+            if (e.dataTransfer.files[0]) {
+                handleFile(e.dataTransfer.files[0]);
+            }
+        });
+        
+        fileInput.addEventListener('change', (e) => {
+            if (e.target.files[0]) {
+                handleFile(e.target.files[0]);
+            }
+        });
 
-      const outerRadiusMM = topWidthMM / 2; // Outer radius is half of top width
-      const innerRadiusMM = bottomWidthMM / 2; // Inner radius is half of bottom width
+        document.addEventListener('paste', (e) => {
+            const items = e.clipboardData?.items;
+            if (items) {
+                for (let item of items) {
+                    if (item.type.startsWith('image/')) {
+                        handleFile(item.getAsFile());
+                        break;
+                    }
+                }
+            }
+        });
 
-      // Safety check: ensure the inner radius is smaller than outer radius
-      if (innerRadiusMM >= outerRadiusMM) {
-        alert("Bottom width must be smaller than the top width.");
-        return;
-      }
+        // Sync scroll between zoom containers
+        let syncingScroll = false;
+        document.getElementById('zoomOriginal').addEventListener('scroll', function() {
+            if (syncingScroll) return;
+            syncingScroll = true;
+            document.getElementById('zoomUpscaled').scrollTop = this.scrollTop;
+            document.getElementById('zoomUpscaled').scrollLeft = this.scrollLeft;
+            syncingScroll = false;
+        });
+        document.getElementById('zoomUpscaled').addEventListener('scroll', function() {
+            if (syncingScroll) return;
+            syncingScroll = true;
+            document.getElementById('zoomOriginal').scrollTop = this.scrollTop;
+            document.getElementById('zoomOriginal').scrollLeft = this.scrollLeft;
+            syncingScroll = false;
+        });
 
-      // Convert to pixels
-      const outerRadiusPx = outerRadiusMM * MM_TO_PX;
-      const innerRadiusPx = (outerRadiusMM - FIXED_THICKNESS_MM) * MM_TO_PX;
+        // ============================================
+        // FILE HANDLING
+        // ============================================
 
-      // Draw the outer curve
-      ctx.beginPath();
-      ctx.arc(centerX, centerY, outerRadiusPx, 0, Math.PI * 2, false);
+        function handleFile(file) {
+            if (!file || !file.type.startsWith('image/')) {
+                toast('Please select a valid image', 'error');
+                return;
+            }
 
-      // Draw the inner curve (cutout)
-      ctx.arc(centerX, centerY, innerRadiusPx, 0, Math.PI * 2, true);
-      ctx.fillStyle = "#FF4081";
-      ctx.fill("evenodd");
+            fileName = file.name.replace(/\.[^/.]+$/, '') || 'upscaled';
+            
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                originalDataURL = e.target.result;
+                
+                const img = new Image();
+                img.onload = () => {
+                    originalImage = img;
+                    origWidth = img.width;
+                    origHeight = img.height;
+                    
+                    document.getElementById('origInfo').textContent = `${origWidth} × ${origHeight} px`;
+                    
+                    // Update size labels
+                    updateSizeLabels();
+                    
+                    processImage();
+                };
+                img.src = originalDataURL;
+            };
+            reader.readAsDataURL(file);
+        }
 
-      // Optional stroke
-      ctx.strokeStyle = "#fff";
-      ctx.lineWidth = 1;
-      ctx.stroke();
-    }
+        function updateSizeLabels() {
+            [1, 2, 4, 8, 16, 32].forEach(scale => {
+                const el = document.getElementById(`size${scale}x`);
+                if (el) {
+                    el.textContent = `${origWidth * scale} × ${origHeight * scale}`;
+                }
+            });
+        }
 
-    // Function to update the canvas with current slider values
-    function updateCurve() {
-      const topWidthMM = parseFloat(topWidthSlider.value);
-      const bottomWidthMM = parseFloat(bottomWidthSlider.value);
+        // ============================================
+        // IMAGE PROCESSING
+        // ============================================
 
-      topWidthValue.textContent = topWidthMM;
-      bottomWidthValue.textContent = bottomWidthMM;
+        async function processImage() {
+            uploadSection.classList.add('hidden');
+            processSection.classList.remove('hidden');
+            resultSection.classList.add('hidden');
+            
+            document.getElementById('processStatus').textContent = 'Enhancing image...';
+            document.getElementById('processDetail').textContent = 'Applying upscaling algorithm';
+            
+            await sleep(100);
+            
+            try {
+                // Create upscaled version for preview (4x)
+                processedCanvas = upscaleImage(originalImage, 4);
+                
+                await sleep(100);
+                
+                showResult();
+            } catch (err) {
+                console.error(err);
+                toast('Error processing image', 'error');
+                reset();
+            }
+        }
 
-      drawCurve(topWidthMM, bottomWidthMM);
-    }
+        function upscaleImage(img, scale) {
+            const sharpness = parseInt(document.getElementById('sharpness').value) / 100;
+            const smoothing = parseInt(document.getElementById('smoothing').value) / 100;
+            const denoise = parseInt(document.getElementById('denoise').value) / 100;
+            const algorithm = document.getElementById('algorithm').value;
+            
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+            
+            canvas.width = img.width * scale;
+            canvas.height = img.height * scale;
+            
+            // Set interpolation quality based on algorithm
+            if (algorithm === 'bicubic' || algorithm === 'lanczos') {
+                ctx.imageSmoothingEnabled = true;
+                ctx.imageSmoothingQuality = 'high';
+            } else {
+                ctx.imageSmoothingEnabled = true;
+                ctx.imageSmoothingQuality = 'medium';
+            }
+            
+            // Draw upscaled image
+            ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+            
+            // Apply enhancements
+            if (sharpness > 0 || smoothing > 0 || denoise > 0) {
+                const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                
+                if (denoise > 0) {
+                    applyDenoise(imageData, denoise);
+                }
+                
+                if (smoothing > 0) {
+                    applySmoothing(imageData, smoothing);
+                }
+                
+                if (sharpness > 0) {
+                    applySharpening(imageData, sharpness);
+                }
+                
+                ctx.putImageData(imageData, 0, 0);
+            }
+            
+            return canvas;
+        }
 
-    // Event listeners for slider changes
-    topWidthSlider.addEventListener("input", updateCurve);
-    bottomWidthSlider.addEventListener("input", updateCurve);
+        function applySharpening(imageData, amount) {
+            const data = imageData.data;
+            const width = imageData.width;
+            const height = imageData.height;
+            const factor = amount * 0.5;
+            
+            const original = new Uint8ClampedArray(data);
+            
+            for (let y = 1; y < height - 1; y++) {
+                for (let x = 1; x < width - 1; x++) {
+                    const idx = (y * width + x) * 4;
+                    
+                    for (let c = 0; c < 3; c++) {
+                        const center = original[idx + c];
+                        const neighbors = (
+                            original[((y-1) * width + x) * 4 + c] +
+                            original[((y+1) * width + x) * 4 + c] +
+                            original[(y * width + x-1) * 4 + c] +
+                            original[(y * width + x+1) * 4 + c]
+                        ) / 4;
+                        
+                        const sharpened = center + (center - neighbors) * factor;
+                        data[idx + c] = Math.max(0, Math.min(255, sharpened));
+                    }
+                }
+            }
+        }
 
-    // Initial draw
-    updateCurve();
+        function applySmoothing(imageData, amount) {
+            const data = imageData.data;
+            const width = imageData.width;
+            const height = imageData.height;
+            const passes = Math.ceil(amount * 2);
+            
+            for (let pass = 0; pass < passes; pass++) {
+                const original = new Uint8ClampedArray(data);
+                
+                for (let y = 1; y < height - 1; y++) {
+                    for (let x = 1; x < width - 1; x++) {
+                        const idx = (y * width + x) * 4;
+                        
+                        for (let c = 0; c < 3; c++) {
+                            let sum = original[idx + c] * 4;
+                            sum += original[((y-1) * width + x) * 4 + c];
+                            sum += original[((y+1) * width + x) * 4 + c];
+                            sum += original[(y * width + x-1) * 4 + c];
+                            sum += original[(y * width + x+1) * 4 + c];
+                            
+                            data[idx + c] = sum / 8;
+                        }
+                    }
+                }
+            }
+        }
 
-    // Function to download the canvas as a PNG
-    downloadBtn.addEventListener("click", () => {
-      const dataUrl = canvas.toDataURL("image/png");
-      const link = document.createElement("a");
-      link.href = dataUrl;
-      link.download = "donut_curve.png";
-      link.click();
-    });
+        function applyDenoise(imageData, amount) {
+            const data = imageData.data;
+            const width = imageData.width;
+            const height = imageData.height;
+            const threshold = amount * 30;
+            
+            const original = new Uint8ClampedArray(data);
+            
+            for (let y = 1; y < height - 1; y++) {
+                for (let x = 1; x < width - 1; x++) {
+                    const idx = (y * width + x) * 4;
+                    
+                    for (let c = 0; c < 3; c++) {
+                        const center = original[idx + c];
+                        const neighbors = [];
+                        
+                        for (let dy = -1; dy <= 1; dy++) {
+                            for (let dx = -1; dx <= 1; dx++) {
+                                if (dx === 0 && dy === 0) continue;
+                                neighbors.push(original[((y+dy) * width + x+dx) * 4 + c]);
+                            }
+                        }
+                        
+                        neighbors.sort((a, b) => a - b);
+                        const median = neighbors[4];
+                        
+                        if (Math.abs(center - median) > threshold) {
+                            data[idx + c] = median;
+                        }
+                    }
+                }
+            }
+        }
 
-  </script>
+        // ============================================
+        // DISPLAY RESULTS
+        // ============================================
 
+        function showResult() {
+            processSection.classList.add('hidden');
+            resultSection.classList.remove('hidden');
+            
+            setZoom(currentZoom);
+            updateSliderLabels();
+            
+            toast('Image enhanced!', 'success');
+        }
+
+        function setZoom(zoom) {
+            currentZoom = zoom;
+            
+            // Update button states
+            document.querySelectorAll('.zoom-btn').forEach(btn => {
+                if (parseInt(btn.dataset.zoom) === zoom) {
+                    btn.classList.remove('bg-white/10');
+                    btn.classList.add('bg-purple-500/30');
+                } else {
+                    btn.classList.add('bg-white/10');
+                    btn.classList.remove('bg-purple-500/30');
+                }
+            });
+            
+            const scale = zoom / 100;
+            
+            // Original (pixelated)
+            const zoomOriginal = document.getElementById('zoomOriginal');
+            zoomOriginal.innerHTML = `<img src="${originalDataURL}" style="width: ${origWidth * scale}px; height: ${origHeight * scale}px;">`;
+            
+            // Upscaled (smooth) - use the processed canvas
+            const zoomUpscaled = document.getElementById('zoomUpscaled');
+            if (processedCanvas) {
+                const upscaledImg = document.createElement('img');
+                upscaledImg.src = processedCanvas.toDataURL('image/png');
+                upscaledImg.style.width = `${origWidth * scale}px`;
+                upscaledImg.style.height = `${origHeight * scale}px`;
+                zoomUpscaled.innerHTML = '';
+                zoomUpscaled.appendChild(upscaledImg);
+            }
+        }
+
+        function updateSliderLabels() {
+            document.getElementById('sharpnessVal').textContent = document.getElementById('sharpness').value + '%';
+            document.getElementById('smoothingVal').textContent = document.getElementById('smoothing').value + '%';
+            document.getElementById('denoiseVal').textContent = document.getElementById('denoise').value + '%';
+        }
+
+        let reprocessTimeout;
+        function reprocess() {
+            updateSliderLabels();
+            
+            clearTimeout(reprocessTimeout);
+            reprocessTimeout = setTimeout(() => {
+                if (originalImage) {
+                    processedCanvas = upscaleImage(originalImage, 4);
+                    setZoom(currentZoom);
+                }
+            }, 200);
+        }
+
+        // ============================================
+        // DOWNLOAD
+        // ============================================
+
+        function downloadUpscaled(scale) {
+            if (!originalImage) return;
+            
+            toast(`Creating ${scale}x image...`, 'info');
+            
+            setTimeout(() => {
+                try {
+                    const canvas = upscaleImage(originalImage, scale);
+                    
+                    canvas.toBlob((blob) => {
+                        const url = URL.createObjectURL(blob);
+                        const a = document.createElement('a');
+                        a.href = url;
+                        a.download = `${fileName}-${scale}x.png`;
+                        document.body.appendChild(a);
+                        a.click();
+                        document.body.removeChild(a);
+                        URL.revokeObjectURL(url);
+                        
+                        const sizeMB = (blob.size / 1024 / 1024).toFixed(2);
+                        toast(`Downloaded! (${sizeMB} MB)`, 'success');
+                    }, 'image/png');
+                } catch (err) {
+                    console.error(err);
+                    toast('Error creating image. Try smaller scale.', 'error');
+                }
+            }, 100);
+        }
+
+        // ============================================
+        // UTILITIES
+        // ============================================
+
+        function reset() {
+            uploadSection.classList.remove('hidden');
+            processSection.classList.add('hidden');
+            resultSection.classList.add('hidden');
+            fileInput.value = '';
+            originalImage = null;
+            originalDataURL = '';
+            processedCanvas = null;
+        }
+
+        function sleep(ms) {
+            return new Promise(r => setTimeout(r, ms));
+        }
+
+        function toast(msg, type = 'info') {
+            const t = document.getElementById('toast');
+            const colors = { 
+                success: 'bg-emerald-500', 
+                error: 'bg-red-500', 
+                info: 'bg-purple-500' 
+            };
+            t.className = `fixed bottom-6 left-1/2 -translate-x-1/2 px-6 py-3 rounded-xl font-bold transition-all duration-300 z-50 ${colors[type]}`;
+            t.textContent = msg;
+            t.classList.remove('translate-y-20', 'opacity-0');
+            setTimeout(() => t.classList.add('translate-y-20', 'opacity-0'), 3000);
+        }
+
+        console.log('Image Upscaler initialized');
+    </script>
 </body>
 </html>

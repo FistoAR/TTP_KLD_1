@@ -263,6 +263,188 @@
         opacity: 0.6;
         cursor: not-allowed;
       }
+
+      /* Zoom Controls */
+      .zoom-controls {
+        position: absolute;
+        bottom: 16px;
+        left: 16px;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        z-index: 40;
+      }
+      .zoom-btn-group {
+        display: flex;
+        justify-content: space-between;
+        background: white;
+        border-radius: 8px;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.15);
+        overflow: hidden;
+        border: 1px solid #e2e8f0;
+      }
+      .zoom-btn {
+        width: 100%;
+        height: 36px;
+        border: none;
+        background: white;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.2s;
+        color: #475569;
+        margin: 0 auto;
+      }
+      .zoom-btn:hover {
+        background: #f1f5f9;
+        color: #3b82f6;
+      }
+      .zoom-btn:active {
+        background: #e2e8f0;
+      }
+      .zoom-btn:disabled {
+        opacity: 0.4;
+        cursor: not-allowed;
+      }
+      .zoom-btn:disabled:hover {
+        background: white;
+        color: #475569;
+      }
+      .zoom-btn svg {
+        width: 18px;
+        height: 18px;
+        fill: currentColor;
+      }
+      .zoom-divider {
+        width: 1px;
+        background: #e2e8f0;
+      }
+      .zoom-display {
+        background: white;
+        border-radius: 8px;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.15);
+        padding: 6px 12px;
+        font-size: 12px;
+        font-weight: 600;
+        color: #475569;
+        text-align: center;
+        min-width: 60px;
+        border: 1px solid #e2e8f0;
+        cursor: pointer;
+        transition: all 0.2s;
+      }
+      .zoom-display:hover {
+        background: #f1f5f9;
+        color: #3b82f6;
+      }
+      
+      /* Pan indicator */
+      .pan-indicator {
+        background: white;
+        border-radius: 8px;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.15);
+        padding: 6px 10px;
+        font-size: 11px;
+        font-weight: 500;
+        color: #64748b;
+        text-align: center;
+        border: 1px solid #e2e8f0;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        opacity: 0;
+        transition: opacity 0.2s;
+      }
+      .pan-indicator.visible {
+        opacity: 1;
+      }
+      .pan-indicator.active {
+        background: #3b82f6;
+        color: white;
+        border-color: #3b82f6;
+      }
+      .pan-indicator svg {
+        width: 14px;
+        height: 14px;
+        fill: currentColor;
+      }
+      
+      /* Reset pan button */
+      .reset-pan-btn {
+        background: white;
+        border-radius: 8px;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.15);
+        padding: 6px 10px;
+        font-size: 11px;
+        font-weight: 500;
+        color: #475569;
+        text-align: center;
+        border: 1px solid #e2e8f0;
+        cursor: pointer;
+        display: none;
+        align-items: center;
+        gap: 6px;
+        transition: all 0.2s;
+      }
+      .reset-pan-btn:hover {
+        background: #f1f5f9;
+        color: #3b82f6;
+      }
+      .reset-pan-btn.visible {
+        display: flex;
+      }
+      .reset-pan-btn svg {
+        width: 14px;
+        height: 14px;
+        fill: currentColor;
+      }
+      
+      @media (max-width: 480px) {
+        .zoom-controls {
+          bottom: 12px;
+          left: 12px;
+        }
+        .zoom-btn {
+          width: 32px;
+          height: 32px;
+        }
+        .zoom-btn svg {
+          width: 16px;
+          height: 16px;
+        }
+        .zoom-display {
+          padding: 5px 10px;
+          font-size: 11px;
+          min-width: 50px;
+        }
+        .pan-indicator, .reset-pan-btn {
+          font-size: 10px;
+          padding: 5px 8px;
+        }
+      }
+
+      /* Canvas container for panning */
+      .canvas-container {
+        position: relative;
+        width: 100%;
+        height: 100%;
+        overflow: hidden;
+      }
+      
+      /* Canvas cursor states */
+      #warpCanvas {
+        cursor: default;
+      }
+      #warpCanvas.can-pan {
+        cursor: grab;
+      }
+      #warpCanvas.space-held {
+        cursor: grab;
+      }
+      #warpCanvas.panning {
+        cursor: grabbing !important;
+      }
     </style>
   </head>
   <body class="bg-slate-100 flex flex-col h-screen overflow-hidden font-sans">
@@ -303,7 +485,35 @@
     </div>
 
     <div class="flex-grow p-4 md:p-6 flex items-center justify-center relative">
-      <canvas id="warpCanvas" class="w-full h-full bg-white rounded-lg shadow-sm"></canvas>
+      <div class="canvas-container">
+        <canvas id="warpCanvas" class="w-full h-full bg-white rounded-lg shadow-sm"></canvas>
+      </div>
+      
+      <!-- Zoom Controls -->
+      <div class="zoom-controls">
+        <div class="zoom-btn-group">
+          <button id="zoomInBtn" class="zoom-btn" title="Zoom In (Ctrl++)">
+            <svg viewBox="0 0 24 24"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
+          </button>
+          <div class="zoom-divider"></div>
+          <button id="zoomOutBtn" class="zoom-btn" title="Zoom Out (Ctrl+-)">
+            <svg viewBox="0 0 24 24"><path d="M19 13H5v-2h14v2z"/></svg>
+          </button>
+        </div>
+        <div id="zoomDisplay" class="zoom-display" title="Click to reset zoom">100%</div>
+        
+        <!-- Pan indicator -->
+        <div id="panIndicator" class="pan-indicator">
+          <svg viewBox="0 0 24 24"><path d="M10 9h4V6h3l-5-5-5 5h3v3zm-1 1H6V7l-5 5 5 5v-3h3v-4zm14 2l-5-5v3h-3v4h3v3l5-5zm-9 3h-4v3H7l5 5 5-5h-3v-3z"/></svg>
+          <span id="panIndicatorText">Hold Space + Drag</span>
+        </div>
+        
+        <!-- Reset pan button -->
+        <button id="resetPanBtn" class="reset-pan-btn" title="Reset pan position">
+          <svg viewBox="0 0 24 24"><path d="M12 5V1L7 6l5 5V7c3.31 0 6 2.69 6 6s-2.69 6-6 6-6-2.69-6-6H4c0 4.42 3.58 8 8 8s8-3.58 8-8-3.58-8-8-8z"/></svg>
+          <span>Reset View</span>
+        </button>
+      </div>
       
       <!-- 3D Viewer -->
       <div id="viewer3DContainer">
@@ -375,8 +585,22 @@
       let currentView = "bottom";
       let currentShapeType = "round";
       let currentShape = "250ml_round";
-      const EXPORT_SCALE = 4;
+      const EXPORT_SCALE = 6;
       let isExporting = false;
+
+      // Zoom state
+      let zoomLevel = 1;
+      const MIN_ZOOM = 0.25;
+      const MAX_ZOOM = 5;
+      const ZOOM_STEP = 0.25;
+
+      // Pan state
+      let panX = 0;
+      let panY = 0;
+      let isPanning = false;
+      let isSpacePressed = false;
+      let lastMouseX = 0;
+      let lastMouseY = 0;
 
       let isViewer3DMinimized = false;
       let isViewer3DExpanded = false;
@@ -404,12 +628,244 @@
       const errorMessage = document.getElementById("errorMessage");
       const errorCloseBtn = document.getElementById("errorCloseBtn");
 
+      // Zoom elements
+      const zoomInBtn = document.getElementById("zoomInBtn");
+      const zoomOutBtn = document.getElementById("zoomOutBtn");
+      const zoomDisplay = document.getElementById("zoomDisplay");
+      
+      // Pan elements
+      const panIndicator = document.getElementById("panIndicator");
+      const panIndicatorText = document.getElementById("panIndicatorText");
+      const resetPanBtn = document.getElementById("resetPanBtn");
+
       const viewer3DContainer = document.getElementById("viewer3DContainer");
       const modelViewer = document.getElementById("modelViewer");
       const viewer3DLoading = document.getElementById("viewer3DLoading");
       const viewer3DStatus = document.getElementById("viewer3DStatus");
       const viewer3DToggle = document.getElementById("viewer3DToggle");
       const viewer3DExpand = document.getElementById("viewer3DExpand");
+
+      // ========== ZOOM FUNCTIONS ==========
+      
+      function canPan() {
+        return zoomLevel > 1;
+      }
+
+      function updateZoomDisplay() {
+        const percentage = Math.round(zoomLevel * 100);
+        zoomDisplay.textContent = `${percentage}%`;
+        
+        // Update button states
+        zoomInBtn.disabled = zoomLevel >= MAX_ZOOM;
+        zoomOutBtn.disabled = zoomLevel <= MIN_ZOOM;
+        
+        // Update pan indicator visibility
+        if (canPan()) {
+          panIndicator.classList.add("visible");
+        } else {
+          panIndicator.classList.remove("visible");
+          panIndicator.classList.remove("active");
+        }
+        
+        // Update reset pan button visibility
+        if (panX !== 0 || panY !== 0) {
+          resetPanBtn.classList.add("visible");
+        } else {
+          resetPanBtn.classList.remove("visible");
+        }
+        
+        // Update canvas cursor
+        updateCanvasCursor();
+      }
+
+      function updateCanvasCursor() {
+        canvas.classList.remove("can-pan", "space-held", "panning");
+        
+        if (isPanning) {
+          canvas.classList.add("panning");
+        } else if (isSpacePressed && canPan()) {
+          canvas.classList.add("space-held");
+        } else if (canPan()) {
+          canvas.classList.add("can-pan");
+        }
+      }
+
+      function zoomIn() {
+        if (zoomLevel < MAX_ZOOM) {
+          zoomLevel = Math.min(MAX_ZOOM, zoomLevel + ZOOM_STEP);
+          
+          // Reset pan if zooming back to 100% or below
+          if (zoomLevel <= 1) {
+            panX = 0;
+            panY = 0;
+          }
+          
+          mainDraw();
+          updateZoomDisplay();
+        }
+      }
+
+      function zoomOut() {
+        if (zoomLevel > MIN_ZOOM) {
+          zoomLevel = Math.max(MIN_ZOOM, zoomLevel - ZOOM_STEP);
+          
+          // Reset pan if zooming back to 100% or below
+          if (zoomLevel <= 1) {
+            panX = 0;
+            panY = 0;
+          }
+          
+          mainDraw();
+          updateZoomDisplay();
+        }
+      }
+
+      function resetZoom() {
+        zoomLevel = 1;
+        panX = 0;
+        panY = 0;
+        mainDraw();
+        updateZoomDisplay();
+      }
+
+      function resetPan() {
+        panX = 0;
+        panY = 0;
+        mainDraw();
+        updateZoomDisplay();
+      }
+
+      function handleWheelZoom(event) {
+        // Check if Ctrl key is pressed for zoom
+        if (event.ctrlKey || event.metaKey) {
+          event.preventDefault();
+          
+          if (event.deltaY < 0) {
+            zoomIn();
+          } else {
+            zoomOut();
+          }
+        }
+      }
+
+      // ========== PAN FUNCTIONS ==========
+      
+      function startPan(event) {
+        if (!canPan()) return;
+        if (!isSpacePressed && event.button !== 1) return; // Space must be held or middle mouse
+        
+        isPanning = true;
+        lastMouseX = event.clientX;
+        lastMouseY = event.clientY;
+        
+        updateCanvasCursor();
+        panIndicator.classList.add("active");
+        panIndicatorText.textContent = "Panning...";
+        
+        event.preventDefault();
+      }
+
+      function doPan(event) {
+        if (!isPanning) return;
+        
+        const deltaX = event.clientX - lastMouseX;
+        const deltaY = event.clientY - lastMouseY;
+        
+        panX += deltaX;
+        panY += deltaY;
+        
+        lastMouseX = event.clientX;
+        lastMouseY = event.clientY;
+        
+        mainDraw();
+        updateZoomDisplay();
+      }
+
+      function endPan() {
+        if (isPanning) {
+          isPanning = false;
+          updateCanvasCursor();
+          panIndicator.classList.remove("active");
+          panIndicatorText.textContent = "Hold Space + Drag";
+        }
+      }
+
+      function handleSpaceDown(event) {
+        if (event.code === "Space" && !event.repeat && canPan()) {
+          // Prevent default only if we're in the canvas area
+          const activeElement = document.activeElement;
+          const isInputFocused = activeElement && (
+            activeElement.tagName === "INPUT" || 
+            activeElement.tagName === "TEXTAREA" || 
+            activeElement.tagName === "SELECT"
+          );
+          
+          if (!isInputFocused) {
+            event.preventDefault();
+            isSpacePressed = true;
+            updateCanvasCursor();
+            panIndicator.classList.add("active");
+            panIndicatorText.textContent = "Click & Drag to Pan";
+          }
+        }
+      }
+
+      function handleSpaceUp(event) {
+        if (event.code === "Space") {
+          isSpacePressed = false;
+          if (!isPanning) {
+            panIndicator.classList.remove("active");
+            panIndicatorText.textContent = "Hold Space + Drag";
+          }
+          updateCanvasCursor();
+          endPan();
+        }
+      }
+
+      // Touch support for panning
+      let touchStartX = 0;
+      let touchStartY = 0;
+      let isTouchPanning = false;
+
+      function handleTouchStart(event) {
+        if (!canPan()) return;
+        if (event.touches.length === 2) {
+          // Two finger touch for panning
+          isTouchPanning = true;
+          const touch = event.touches[0];
+          touchStartX = touch.clientX;
+          touchStartY = touch.clientY;
+          lastMouseX = touchStartX;
+          lastMouseY = touchStartY;
+          isPanning = true;
+          updateCanvasCursor();
+          event.preventDefault();
+        }
+      }
+
+      function handleTouchMove(event) {
+        if (!isTouchPanning || !isPanning) return;
+        if (event.touches.length === 2) {
+          const touch = event.touches[0];
+          const deltaX = touch.clientX - lastMouseX;
+          const deltaY = touch.clientY - lastMouseY;
+          
+          panX += deltaX;
+          panY += deltaY;
+          
+          lastMouseX = touch.clientX;
+          lastMouseY = touch.clientY;
+          
+          mainDraw();
+          updateZoomDisplay();
+          event.preventDefault();
+        }
+      }
+
+      function handleTouchEnd() {
+        isTouchPanning = false;
+        endPan();
+      }
 
       // ========== LOADING & ERROR FUNCTIONS ==========
       
@@ -445,19 +901,8 @@
         errorOverlay.classList.remove("show");
       }
 
+      // Only close error modal when clicking OK button
       errorCloseBtn.addEventListener("click", hideError);
-      
-      errorOverlay.addEventListener("click", (e) => {
-        if (e.target === errorOverlay) {
-          hideError();
-        }
-      });
-
-      document.addEventListener("keydown", (e) => {
-        if (e.key === "Escape" && errorOverlay.classList.contains("show")) {
-          hideError();
-        }
-      });
 
       // ========== DOWNLOAD HELPER ==========
       
@@ -523,8 +968,8 @@
           bottomPath: "M 73.32,242.27 C 283.84,56.41 576.84,75.5 764.01,242.27",
           topIsReversed: true,
           bottomIsReversed: false,
-          modelPath: "./assets/models/500ml_Round_with_logo.glb",
-          targetMaterials: ["Bottom", "Label", "Wrap"],
+          modelPath: "./assets/models/250ml_round_t.glb",
+          targetMaterials: ["Texture"],
         },
         "300ml_round": {
           type: "round",
@@ -983,7 +1428,7 @@
         }
       }
 
-      function renderImageContent(localCtx, targetW, targetH, isExport, exportScale, clearBackground) {
+      function renderImageContent(localCtx, targetW, targetH, isExport, exportScale, clearBackground, applyPan = false) {
         if (clearBackground) localCtx.clearRect(0, 0, targetW, targetH);
 
         const shape = getCurrentShape();
@@ -992,12 +1437,23 @@
         const margin = isExport ? 0 : 20;
         const scaleXFit = (targetW - 2 * margin) / shape.width;
         const scaleYFit = (targetH - 2 * margin) / shape.height;
-        const finalScale = isExport ? exportScale : Math.min(scaleXFit, scaleYFit);
+        let finalScale = isExport ? exportScale : Math.min(scaleXFit, scaleYFit);
+        
+        // Apply zoom level for preview (not for export)
+        if (!isExport) {
+          finalScale *= zoomLevel;
+        }
 
         const scaledW = shape.width * finalScale;
         const scaledH = shape.height * finalScale;
-        const offsetX = (targetW - scaledW) / 2;
-        const offsetY = (targetH - scaledH) / 2;
+        let offsetX = (targetW - scaledW) / 2;
+        let offsetY = (targetH - scaledH) / 2;
+        
+        // Apply pan offset for preview
+        if (applyPan && !isExport) {
+          offsetX += panX;
+          offsetY += panY;
+        }
 
         const path = new Path2D(shape.path);
         const transformMatrix = new DOMMatrix();
@@ -1047,11 +1503,11 @@
         }
       }
 
-      function drawShape(localCtx, targetW, targetH, isExport, exportScale, clearBackground) {
+      function drawShape(localCtx, targetW, targetH, isExport, exportScale, clearBackground, applyPan = false) {
         localCtx.imageSmoothingEnabled = true;
         localCtx.imageSmoothingQuality = "high";
 
-        renderImageContent(localCtx, targetW, targetH, isExport, exportScale, clearBackground);
+        renderImageContent(localCtx, targetW, targetH, isExport, exportScale, clearBackground, applyPan);
 
         const shape = getCurrentShape();
         if (!shape) {
@@ -1067,11 +1523,23 @@
         const margin = isExport ? 0 : 20;
         const scaleXFit = (targetW - 2 * margin) / shape.width;
         const scaleYFit = (targetH - 2 * margin) / shape.height;
-        const finalScale = isExport ? exportScale : Math.min(scaleXFit, scaleYFit);
+        let finalScale = isExport ? exportScale : Math.min(scaleXFit, scaleYFit);
+        
+        // Apply zoom level for preview (not for export)
+        if (!isExport) {
+          finalScale *= zoomLevel;
+        }
+        
         const scaledW = shape.width * finalScale;
         const scaledH = shape.height * finalScale;
-        const offsetX = (targetW - scaledW) / 2;
-        const offsetY = (targetH - scaledH) / 2;
+        let offsetX = (targetW - scaledW) / 2;
+        let offsetY = (targetH - scaledH) / 2;
+        
+        // Apply pan offset for preview
+        if (applyPan && !isExport) {
+          offsetX += panX;
+          offsetY += panY;
+        }
 
         const path = new Path2D(shape.path);
         const transformMatrix = new DOMMatrix();
@@ -1090,7 +1558,7 @@
 
       function mainDraw() {
         resizeCanvas();
-        drawShape(ctx, canvas.clientWidth, canvas.clientHeight, false, 1, true);
+        drawShape(ctx, canvas.clientWidth, canvas.clientHeight, false, 1, true, true);
       }
 
       async function processUploadedImage(img, shape) {
@@ -1202,7 +1670,7 @@
                   hideLoading();
                   showError(
                     "Image Too Small",
-                    `<div class="font-semibold">The image dimensions (${Math.round(width)} × ${Math.round(height)}px) are smaller than required.\n\nMinimum size: ${expectedWidth} × ${expectedHeight}px </div>`
+                    `The image dimensions (${Math.round(width)} × ${Math.round(height)}px) are smaller than required.\n\nMinimum size: ${expectedWidth} × ${expectedHeight}px`
                   );
                   currentImage = null;
                   currentImageDataUrl = null;
@@ -1343,6 +1811,11 @@
         currentImageDataUrl = null;
         textureImageDataUrl = null;
         fileInput.value = "";
+        // Reset zoom and pan when changing shape type
+        zoomLevel = 1;
+        panX = 0;
+        panY = 0;
+        updateZoomDisplay();
         mainDraw();
       }
 
@@ -1362,6 +1835,11 @@
         currentImageDataUrl = null;
         textureImageDataUrl = null;
         fileInput.value = "";
+        // Reset zoom and pan when changing shape
+        zoomLevel = 1;
+        panX = 0;
+        panY = 0;
+        updateZoomDisplay();
 
         const shape = getCurrentShape();
         load3DModel(shape);
@@ -1369,6 +1847,24 @@
       }
 
       // ========== EXPORT FUNCTIONS ==========
+
+      // Upscale image for better quality export
+      function upscaleImage(img, targetWidth, targetHeight) {
+        return new Promise((resolve) => {
+          const upscaleCanvas = document.createElement("canvas");
+          upscaleCanvas.width = targetWidth;
+          upscaleCanvas.height = targetHeight;
+          const upscaleCtx = upscaleCanvas.getContext("2d");
+          
+          upscaleCtx.imageSmoothingEnabled = true;
+          upscaleCtx.imageSmoothingQuality = "high";
+          upscaleCtx.drawImage(img, 0, 0, targetWidth, targetHeight);
+          
+          const upscaledImg = new Image();
+          upscaledImg.onload = () => resolve(upscaledImg);
+          upscaledImg.src = upscaleCanvas.toDataURL("image/png", 1.0);
+        });
+      }
 
       async function exportPNG() {
         if (isExporting) return;
@@ -1389,6 +1885,24 @@
         await new Promise(r => setTimeout(r, 50));
 
         try {
+          updateLoading("Exporting PNG...", "Upscaling image");
+          
+          // Upscale the source image if needed
+          const targetImgWidth = shape.uploadDimensions ? shape.uploadDimensions.width * 2 : currentImage.width * 2;
+          const targetImgHeight = shape.uploadDimensions ? shape.uploadDimensions.height * 2 : currentImage.height * 2;
+          
+          let processedImage = currentImage;
+          if (currentImage.width < targetImgWidth || currentImage.height < targetImgHeight) {
+            processedImage = await upscaleImage(currentImage, 
+              Math.max(currentImage.width, targetImgWidth), 
+              Math.max(currentImage.height, targetImgHeight)
+            );
+          }
+          
+          // Temporarily swap currentImage for export
+          const originalImage = currentImage;
+          currentImage = processedImage;
+          
           updateLoading("Exporting PNG...", "Creating canvas");
           
           const exportWidth = shape.width * EXPORT_SCALE;
@@ -1401,7 +1915,10 @@
           await new Promise(r => setTimeout(r, 50));
           updateLoading("Exporting PNG...", "Rendering image");
 
-          drawShape(exportCtx, exportWidth, exportHeight, true, EXPORT_SCALE, true);
+          drawShape(exportCtx, exportWidth, exportHeight, true, EXPORT_SCALE, true, false);
+          
+          // Restore original image
+          currentImage = originalImage;
 
           await new Promise(r => setTimeout(r, 50));
           updateLoading("Exporting PNG...", "Generating file");
@@ -1461,7 +1978,7 @@
           exportCanvas.width = exportWidth;
           exportCanvas.height = exportHeight;
           const exportCtx = exportCanvas.getContext("2d", { alpha: true });
-          renderImageContent(exportCtx, exportWidth, exportHeight, true, EXPORT_SCALE, true);
+          renderImageContent(exportCtx, exportWidth, exportHeight, true, EXPORT_SCALE, true, false);
           const rasterData = exportCanvas.toDataURL("image/png");
           svgContent = `<image x="0" y="0" width="${shape.width}" height="${shape.height}" xlink:href="${rasterData}" preserveAspectRatio="none" />`;
           svgContent += `\n<!-- CMYK-VECTORS-HINT: fill=${hexToCmykPercentString("#eeeeee")} (vectors only) -->`;
@@ -1555,7 +2072,7 @@
           exportCtx.clearRect(0, 0, exportWidth, exportHeight);
           
           // Draw only the shape content (no background)
-          renderImageContent(exportCtx, exportWidth, exportHeight, true, EXPORT_SCALE, false);
+          renderImageContent(exportCtx, exportWidth, exportHeight, true, EXPORT_SCALE, false, false);
 
           await new Promise(r => setTimeout(r, 50));
           updateLoading("Exporting PDF...", "Generating PDF");
@@ -1610,6 +2127,36 @@
         radio.addEventListener("change", handleViewChange);
       });
 
+      // Zoom controls
+      zoomInBtn.addEventListener("click", zoomIn);
+      zoomOutBtn.addEventListener("click", zoomOut);
+      zoomDisplay.addEventListener("click", resetZoom);
+      resetPanBtn.addEventListener("click", resetPan);
+      canvas.addEventListener("wheel", handleWheelZoom, { passive: false });
+
+      // Pan controls - Mouse
+      canvas.addEventListener("mousedown", startPan);
+      window.addEventListener("mousemove", doPan);
+      window.addEventListener("mouseup", endPan);
+      window.addEventListener("mouseleave", endPan);
+
+      // Pan controls - Touch
+      canvas.addEventListener("touchstart", handleTouchStart, { passive: false });
+      canvas.addEventListener("touchmove", handleTouchMove, { passive: false });
+      canvas.addEventListener("touchend", handleTouchEnd);
+      canvas.addEventListener("touchcancel", handleTouchEnd);
+
+      // Pan controls - Keyboard (Space)
+      window.addEventListener("keydown", handleSpaceDown);
+      window.addEventListener("keyup", handleSpaceUp);
+
+      // Handle window blur to reset space state
+      window.addEventListener("blur", () => {
+        isSpacePressed = false;
+        endPan();
+        updateCanvasCursor();
+      });
+
       document.addEventListener("keydown", (e) => {
         if (e.ctrlKey || e.metaKey) {
           if (e.key === "p") {
@@ -1618,6 +2165,15 @@
           } else if (e.key === "s") {
             e.preventDefault();
             exportSVG();
+          } else if (e.key === "=" || e.key === "+") {
+            e.preventDefault();
+            zoomIn();
+          } else if (e.key === "-") {
+            e.preventDefault();
+            zoomOut();
+          } else if (e.key === "0") {
+            e.preventDefault();
+            resetZoom();
           }
         }
       });
@@ -1647,6 +2203,7 @@
         toggleViewSelector();
         updateSpecificShapeSelector();
         updateUploadPlaceholder();
+        updateZoomDisplay();
         mainDraw();
       }
 

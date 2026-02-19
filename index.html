@@ -5,100 +5,125 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Terra Tech Packs KLD</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            keyframes: {
+              popIn: {
+                '0%': { transform: 'scale(0.9)', opacity: '0' },
+                '100%': { transform: 'scale(1)', opacity: '1' },
+              }
+            },
+            animation: {
+              popIn: 'popIn 0.2s ease-out',
+            }
+          }
+        }
+      }
+    </script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/paper.js/0.12.17/paper-full.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script
       type="module"
       src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.3.0/model-viewer.min.js"
     ></script>
-    <link rel="stylesheet" href="./index.css">
+    <!-- CSS file removed, styles converted to Tailwind -->
   </head>
-  <body class="bg-slate-100 flex flex-col h-screen overflow-hidden font-sans">
+  <body class="bg-slate-100 flex flex-col h-screen overflow-hidden font-sans relative">
     <div class="bg-white shadow-md z-10 relative">
-      <img src="./assets/terratechpacks.png" alt="Terra Tech Packs" class="site-logo" />
-      <div class="container mx-auto pt-4 pb-3 flex justify-center items-end flex-wrap gap-x-6 gap-y-4">
+      <!-- Site Logo with vw units -->
+      <img src="./assets/terratechpacks.png" alt="Terra Tech Packs" class="absolute left-[2vw] top-1/2 -translate-y-1/2 h-[2vw] object-contain z-50 hidden sm:block" />
+      
+      <div class="container mx-auto pt-[1vh] pb-[1vh] flex justify-center items-end flex-wrap gap-x-[1.5vw] gap-y-[1vh]">
         <div class="flex flex-col">
-          <label for="shapeTypeSelect" class="text-xs font-semibold text-slate-600 mb-1">Select Shape Type:</label>
-          <select id="shapeTypeSelect" class="h-12 min-w-[180px] px-3 py-2 bg-white border-2 border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-300 focus:border-blue-500 hover:border-blue-500 transition cursor-pointer"></select>
+          <label for="shapeTypeSelect" class="text-[0.8vw] font-semibold text-slate-600 mb-[0.3vh]">Select Shape Type:</label>
+          <select id="shapeTypeSelect" class="h-[2.4vw] min-w-[13vw] px-[0.7vw] py-[0.4vh] bg-white border border-slate-300 rounded-md text-[0.9vw] focus:ring-1 focus:ring-blue-300 focus:border-blue-500 hover:border-blue-500 transition cursor-pointer"></select>
         </div>
         <div class="flex flex-col">
-          <label for="shapeSelect" class="text-xs font-semibold text-slate-600 mb-1">Select Specific Shape:</label>
-          <select id="shapeSelect" class="h-12 min-w-[180px] px-3 py-2 bg-white border-2 border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-300 focus:border-blue-500 hover:border-blue-500 transition cursor-pointer"></select>
+          <label for="shapeSelect" class="text-[0.8vw] font-semibold text-slate-600 mb-[0.3vh]">Select Specific Shape:</label>
+          <select id="shapeSelect" class="h-[2.4vw] min-w-[13vw] px-[0.7vw] py-[0.4vh] bg-white border border-slate-300 rounded-md text-[0.9vw] focus:ring-1 focus:ring-blue-300 focus:border-blue-500 hover:border-blue-500 transition cursor-pointer"></select>
         </div>
-        <div id="viewSelector" class="hidden self-end pb-1">
-          <div class="radio-group flex flex-col gap-1">
-            <div class="radio-container">
-              <input type="radio" id="viewTopRadio" name="view_type" value="top" class="cursor-pointer accent-blue-600" />
-              <label for="viewTopRadio" class="text-sm ml-2 text-slate-700 cursor-pointer">Top</label>
+        <div id="viewSelector" class="hidden self-end pb-[0.3vh] [&.hidden]:hidden">
+          <div class="radio-group flex flex-col gap-[0.3vh]">
+            <div class="radio-container flex items-center [&.hidden]:hidden">
+              <input type="radio" id="viewTopRadio" name="view_type" value="top" class="cursor-pointer accent-blue-600 w-[0.9vw] h-[0.9vw]" />
+              <label for="viewTopRadio" class="text-[0.75vw] ml-[0.4vw] text-slate-700 cursor-pointer">Top</label>
             </div>
-            <div class="radio-container">
-              <input type="radio" id="viewBottomRadio" name="view_type" value="bottom" checked class="cursor-pointer accent-blue-600" />
-              <label for="viewBottomRadio" class="text-sm ml-2 text-slate-700 cursor-pointer">Bottom</label>
+            <div class="radio-container flex items-center [&.hidden]:hidden">
+              <input type="radio" id="viewBottomRadio" name="view_type" value="bottom" checked class="cursor-pointer accent-blue-600 w-[0.9vw] h-[0.9vw]" />
+              <label for="viewBottomRadio" class="text-[0.75vw] ml-[0.4vw] text-slate-700 cursor-pointer">Bottom</label>
             </div>
           </div>
         </div>
         <div id="dropArea" class="flex flex-col">
-          <label for="imageUpload" class="text-xs font-semibold text-slate-600 mb-1">Upload Label:</label>
-          <label class="file-upload-label h-12 min-w-[180px] flex items-center justify-center px-5 bg-slate-50 border-2 border-dashed border-slate-400 rounded-lg cursor-pointer hover:border-blue-500 transition" for="imageUpload">
+          <label for="imageUpload" class="text-[0.8vw] font-semibold text-slate-600 mb-[0.3vh]">Upload Label:</label>
+          <label class="file-upload-label h-[2.4vw] min-w-[13vw] flex items-center justify-center px-[0.9vw] bg-slate-50 border border-dashed border-slate-400 rounded-md cursor-pointer hover:border-blue-500 transition [&.dragover]:border-blue-500" for="imageUpload">
             <input type="file" id="imageUpload" class="hidden" accept="image/*,.svg" />
-            <small id="uploadText" class="font-medium text-slate-700">Drag & drop or <span class="font-semibold text-blue-600 underline">Browse</span></small>
+            <small id="uploadText" class="font-medium text-slate-700 text-[0.8vw]">Drag & drop or <span class="font-semibold text-blue-600 underline">Browse</span></small>
           </label>
         </div>
-        <button class="export h-12 px-6 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 transition" id="exportPngBtn">Export PNG</button>
-        <button class="export h-12 px-6 bg-orange-500 text-white font-semibold rounded-lg hover:bg-orange-600 transition" id="exportSvgBtn">Export SVG</button>
-        <button class="export h-12 px-6 bg-red-700 text-white font-semibold rounded-lg hover:bg-red-800 transition" id="exportPdfBtn">Export PDF</button>
+        <button class="export h-[2.4vw] px-[1.3vw] bg-blue-600 text-white font-semibold rounded-md hover:bg-blue-700 transition disabled:opacity-60 disabled:cursor-not-allowed text-[0.9vw]" id="exportPngBtn">Export PNG</button>
+        <button class="export h-[2.4vw] px-[1.3vw] bg-orange-500 text-white font-semibold rounded-md hover:bg-orange-600 transition disabled:opacity-60 disabled:cursor-not-allowed text-[0.9vw]" id="exportSvgBtn">Export SVG</button>
+        <button class="export h-[2.4vw] px-[1.3vw] bg-red-700 text-white font-semibold rounded-md hover:bg-red-800 transition disabled:opacity-60 disabled:cursor-not-allowed text-[0.9vw]" id="exportPdfBtn">Export PDF</button>
       </div>
     </div>
 
     <div class="flex-grow p-4 md:p-6 flex items-center justify-center relative">
-      <div class="canvas-container">
-        <canvas id="warpCanvas" class="w-full h-full bg-white rounded-lg shadow-sm"></canvas>
+      <div class="canvas-container relative w-full h-full overflow-hidden">
+        <canvas id="warpCanvas" class="w-full h-full bg-white rounded-lg shadow-sm cursor-default [&.can-pan]:cursor-grab [&.space-held]:cursor-grab [&.panning]:cursor-grabbing"></canvas>
       </div>
       
-      <!-- Zoom Controls -->
-      <div class="zoom-controls">
-        <div class="zoom-btn-group">
-          <button id="zoomInBtn" class="zoom-btn" title="Zoom In (Ctrl++)">
-            <svg viewBox="0 0 24 24"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
+      <!-- Zoom Controls with vw/vh positioning -->
+      <!-- Zoom Controls with vw/vh positioning -->
+      <div class="zoom-controls absolute bottom-[2vh] left-[2vw] flex flex-col gap-[0.5vh] z-40 max-[480px]:bottom-3 max-[480px]:left-3">
+        <div class="zoom-btn-group flex justify-between bg-white rounded-md shadow-[0_2px_8px_rgba(0,0,0,0.15)] overflow-hidden border border-slate-200">
+          <button id="zoomInBtn" class="zoom-btn w-[2.2vw] h-[2.2vw] bg-white border-0 cursor-pointer flex items-center justify-center transition-all text-slate-600 hover:bg-slate-50 hover:text-blue-500 active:bg-slate-200 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-white disabled:hover:text-slate-600 max-[480px]:w-8 max-[480px]:h-8" title="Zoom In (Ctrl++)">
+            <svg class="w-[0.9vw] h-[0.9vw] fill-current max-[480px]:w-4 max-[480px]:h-4" viewBox="0 0 24 24"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
           </button>
-          <div class="zoom-divider"></div>
-          <button id="zoomOutBtn" class="zoom-btn" title="Zoom Out (Ctrl+-)">
-            <svg viewBox="0 0 24 24"><path d="M19 13H5v-2h14v2z"/></svg>
+          <div class="zoom-divider w-px bg-slate-200"></div>
+          <button id="zoomOutBtn" class="zoom-btn w-[2.2vw] h-[2.2vw] bg-white border-0 cursor-pointer flex items-center justify-center transition-all text-slate-600 hover:bg-slate-50 hover:text-blue-500 active:bg-slate-200 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-white disabled:hover:text-slate-600 max-[480px]:w-8 max-[480px]:h-8" title="Zoom Out (Ctrl+-)">
+            <svg class="w-[0.9vw] h-[0.9vw] fill-current max-[480px]:w-4 max-[480px]:h-4" viewBox="0 0 24 24"><path d="M19 13H5v-2h14v2z"/></svg>
           </button>
         </div>
-        <div id="zoomDisplay" class="zoom-display" title="Click to reset zoom">100%</div>
+        <div id="zoomDisplay" class="zoom-display bg-white rounded-md shadow-[0_2px_8px_rgba(0,0,0,0.15)] px-[0.7vw] py-[0.3vh] text-[0.7vw] font-semibold text-slate-600 text-center min-w-[3.8vw] border border-slate-200 cursor-pointer transition-all hover:bg-slate-50 hover:text-blue-500 max-[480px]:px-2.5 max-[480px]:py-1.5 max-[480px]:min-w-[50px] max-[480px]:text-[11px]" title="Click to reset zoom">100%</div>
         
         <!-- Pan indicator -->
-        <div id="panIndicator" class="pan-indicator">
-          <svg viewBox="0 0 24 24"><path d="M10 9h4V6h3l-5-5-5 5h3v3zm-1 1H6V7l-5 5 5 5v-3h3v-4zm14 2l-5-5v3h-3v4h3v3l5-5zm-9 3h-4v3H7l5 5 5-5h-3v-3z"/></svg>
+        <div id="panIndicator" class="pan-indicator bg-white rounded-md shadow-[0_2px_8px_rgba(0,0,0,0.15)] px-[0.6vw] py-[0.3vh] text-[0.6vw] font-medium text-slate-500 text-center border border-slate-200 flex items-center gap-[0.3vw] opacity-0 transition-opacity duration-200 [&.visible]:opacity-100 [&.active]:bg-blue-500 [&.active]:text-white [&.active]:border-blue-500 max-[480px]:p-1.5 max-[480px]:text-[10px]">
+          <svg class="w-[0.8vw] h-[0.8vw] fill-current" viewBox="0 0 24 24"><path d="M10 9h4V6h3l-5-5-5 5h3v3zm-1 1H6V7l-5 5 5 5v-3h3v-4zm14 2l-5-5v3h-3v4h3v3l5-5zm-9 3h-4v3H7l5 5 5-5h-3v-3z"/></svg>
           <span id="panIndicatorText">Hold Space + Drag</span>
         </div>
         
         <!-- Reset pan button -->
-        <button id="resetPanBtn" class="reset-pan-btn" title="Reset pan position">
-          <svg viewBox="0 0 24 24"><path d="M12 5V1L7 6l5 5V7c3.31 0 6 2.69 6 6s-2.69 6-6 6-6-2.69-6-6H4c0 4.42 3.58 8 8 8s8-3.58 8-8-3.58-8-8-8z"/></svg>
+        <button id="resetPanBtn" class="reset-pan-btn bg-white rounded-md shadow-[0_2px_8px_rgba(0,0,0,0.15)] px-[0.6vw] py-[0.3vh] text-[0.6vw] font-medium text-slate-600 text-center border border-slate-200 cursor-pointer hidden items-center gap-[0.3vw] transition-all hover:bg-slate-50 hover:text-blue-500 [&.visible]:flex max-[480px]:p-1.5 max-[480px]:text-[10px]" title="Reset pan position">
+          <svg class="w-[0.8vw] h-[0.8vw] fill-current" viewBox="0 0 24 24"><path d="M12 5V1L7 6l5 5V7c3.31 0 6 2.69 6 6s-2.69 6-6 6-6-2.69-6-6H4c0 4.42 3.58 8 8 8s8-3.58 8-8-3.58-8-8-8z"/></svg>
           <span>Reset View</span>
         </button>
       </div>
       
-      <!-- 3D Viewer -->
-      <div id="viewer3DContainer">
-        <div class="viewer3D-controls">
-          <button id="viewer3DExpand" class="viewer3D-btn" title="Expand">
-            <svg viewBox="0 0 24 24"><path d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z"/></svg>
+      <!-- 3D Viewer with vw sizing and Tailwind group logic for minimization -->
+      <div id="viewer3DContainer" class="absolute top-[1vh] right-[1vw] w-[14vw] h-[14vw] min-w-[9vw] min-h-[9vw] bg-gradient-to-br from-slate-800 to-slate-900 rounded-lg shadow-[0_6px_24px_rgba(0,0,0,0.3)] overflow-hidden z-50 border border-white/10 transition-all duration-300 hover:shadow-[0_10px_35px_rgba(0,0,0,0.4)] group [&.expanded]:w-[28vw] [&.expanded]:h-[24vw] [&.expanded]:min-w-[22vw] [&.expanded]:min-h-[22vh] [&.minimized]:w-[5.5vw] [&.minimized]:h-[2.8vh] [&.minimized]:min-w-0 [&.minimized]:min-h-0 [&.minimized]:cursor-pointer max-md:w-[25vw] max-md:h-[25vw] max-md:top-2 max-md:right-2 max-md:[&.expanded]:w-[50vw] max-md:[&.expanded]:h-[40vw] max-sm:w-[40vw] max-sm:h-[40vw] max-sm:[&.expanded]:w-[80vw] max-sm:[&.expanded]:h-[70vw] max-sm:[&.minimized]:w-[70px] max-sm:[&.minimized]:h-[24px]">
+        <div class="viewer3D-controls absolute top-[0.5vh] right-[0.4vw] flex gap-[0.2vw] z-10 opacity-0 transition-opacity duration-200 group-hover:opacity-100 [&.hidden]:hidden group-[.minimized]:opacity-100 group-[.minimized]:top-1/2 group-[.minimized]:-translate-y-1/2 group-[.minimized]:right-[0.3vw]">
+          <button id="viewer3DExpand" class="viewer3D-btn w-[1.4vw] h-[1.4vw] bg-black/60 border-0 rounded cursor-pointer flex items-center justify-center transition-all hover:bg-blue-500/80 group-[.minimized]:hidden" title="Expand">
+            <svg class="w-[0.8vw] h-[0.8vw] fill-white" viewBox="0 0 24 24"><path d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z"/></svg>
           </button>
-          <button id="viewer3DToggle" class="viewer3D-btn" title="Minimize">
-            <svg viewBox="0 0 24 24"><path d="M19 13H5v-2h14v2z"/></svg>
+          <button id="viewer3DToggle" class="viewer3D-btn w-[1.4vw] h-[1.4vw] bg-black/60 border-0 rounded cursor-pointer flex items-center justify-center transition-all hover:bg-blue-500/80" title="Minimize">
+            <svg class="w-[0.8vw] h-[0.8vw] fill-white" viewBox="0 0 24 24"><path d="M19 13H5v-2h14v2z"/></svg>
           </button>
         </div>
         
-        <div class="viewer3D-loading" id="viewer3DLoading">
-          <div class="mini-spinner"></div>
+        <div class="viewer3D-loading absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-slate-400 text-[0.7vw] text-center z-5 pointer-events-none [&.hidden]:hidden group-[.minimized]:hidden" id="viewer3DLoading">
+          <div class="mini-spinner w-[1.2vw] h-[1.2vw] border-2 border-slate-500/30 border-t-blue-500 rounded-full animate-spin mx-auto mb-[0.4vh]"></div>
           <span>Loading...</span>
         </div>
-        <div class="viewer3D-status hidden" id="viewer3DStatus"></div>
+        <div class="viewer3D-status absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-slate-400 text-[0.7vw] text-center z-5 p-[0.4vh] hidden [&.hidden]:hidden group-[.minimized]:hidden" id="viewer3DStatus"></div>
         
+        <!-- Label for minimized state -->
+        <span class="hidden group-[.minimized]:block absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-slate-400 text-[0.7vw] font-semibold">3D View</span>
+
         <model-viewer
           id="modelViewer"
+          class="w-full h-full block bg-transparent group-[.minimized]:hidden"
           alt="3D product preview"
           camera-controls
           auto-rotate
@@ -109,32 +134,34 @@
           shadow-intensity="1"
           environment-image="neutral"
           interaction-prompt="none"
-          style="background: transparent"
+          style="background: transparent; --poster-color: transparent; --progress-bar-color: #3b82f6; --progress-bar-height: 2px;"
         ></model-viewer>
       </div>
     </div>
 
     <!-- Loading Overlay -->
-    <div id="loadingOverlay" class="loading-overlay">
-      <div class="loading-box">
-        <div class="spinner"></div>
-        <div class="loading-text" id="loadingText">Processing...</div>
-        <div class="loading-subtext" id="loadingSubtext">Please wait</div>
+    <div id="loadingOverlay" class="loading-overlay fixed inset-0 w-full h-full bg-black/60 hidden flex-col items-center justify-center z-[1000] backdrop-blur-[4px] [&.show]:flex">
+      <div class="loading-box bg-white p-[3vh_3vw] rounded-2xl shadow-[0_20px_60px_rgba(0,0,0,0.3)] flex flex-col items-center gap-[1vh]">
+        <div class="spinner w-[4vw] h-[4vw] border-4 border-gray-200 border-t-blue-500 rounded-full animate-spin"></div>
+        <div class="loading-text text-gray-700 text-[1vw] font-medium" id="loadingText">Processing...</div>
+        <div class="loading-subtext text-gray-400 text-[0.7vw]" id="loadingSubtext">Please wait</div>
       </div>
     </div>
 
     <!-- Error Popup Modal -->
-    <div id="errorOverlay" class="error-overlay">
-      <div class="error-popup">
-        <div class="error-icon">
-          <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg>
+    <div id="errorOverlay" class="error-overlay fixed inset-0 w-full h-full bg-black/50 hidden items-center justify-center z-[1001] backdrop-blur-[2px] [&.show]:flex">
+      <div class="error-popup bg-white p-[2vw] rounded-2xl shadow-[0_20px_60px_rgba(0,0,0,0.3)] max-w-[30vw] w-[90%] text-center animate-popIn">
+        <div class="error-icon w-[4vw] h-[4vw] bg-red-50 rounded-full flex items-center justify-center mx-auto mb-[1vh]">
+          <svg class="w-[2vw] h-[2vw] fill-red-500" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg>
         </div>
-        <div class="error-title" id="errorTitle">Error</div>
-        <div class="error-message" id="errorMessage">Something went wrong.</div>
-        <button class="error-close-btn" id="errorCloseBtn">OK</button>
+        <div class="error-title text-gray-800 text-[1.2vw] font-semibold mb-[0.5vh]" id="errorTitle">Error</div>
+        <div class="error-message text-gray-500 text-[0.9vw] leading-relaxed mb-[1.5vh] whitespace-pre-line" id="errorMessage">Something went wrong.</div>
+        <button class="error-close-btn bg-blue-500 text-white border-none py-[0.8vh] px-[2vw] rounded-lg text-[0.9vw] font-medium cursor-pointer transition-colors hover:bg-blue-600" id="errorCloseBtn">OK</button>
       </div>
     </div>
 
+    <!-- Hidden Paper.js canvas (off-screen, used only as a math engine) -->
+    <canvas id="paperCanvas" width="3000" height="1500" style="display:none;position:absolute;left:-9999px;top:-9999px;"></canvas>
     <script type="module" src="./index.js"></script>
   </body>
 </html>

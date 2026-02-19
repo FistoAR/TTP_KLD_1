@@ -11,10 +11,20 @@
       let currentImage = null;
       let currentImageDataUrl = null;
       let textureImageDataUrl = null;
+      let currentSVGRawText = null;       // Raw SVG source text for vector-native envelope warp export
+      let warpedSVGPreviewImg = null;      // Cached warped SVG <img> for live canvas preview
+
+      /** Clear the warped preview image and free its Blob URL. */
+      function clearWarpedPreview() {
+        if (warpedSVGPreviewImg && warpedSVGPreviewImg._blobUrl) {
+          URL.revokeObjectURL(warpedSVGPreviewImg._blobUrl);
+        }
+        warpedSVGPreviewImg = null;
+      }
       let currentView = "bottom";
       let currentShapeType = "round";
       let currentShape = "250ml_round";
-      const EXPORT_SCALE = 20;
+      const EXPORT_SCALE = 5;
       let isExporting = false;
 
       // Zoom state
@@ -875,7 +885,7 @@
         const shape = getCurrentShape();
         if (shape && shape.uploadDimensions) {
           const { width, height } = shape.uploadDimensions;
-          uploadText.innerHTML = `<span class="text-xs text-slate-500 block text-center">${width} × ${height}px</span>Drag & drop or <span class="font-semibold text-blue-600 underline">Browse</span>`;
+          uploadText.innerHTML = `<span class="text-[0.65vw] text-slate-500 block text-center">${width} × ${height}px</span>Drag & drop or <span class="font-semibold text-blue-600 underline">Browse</span>`;
         } else {
           uploadText.innerHTML = 'Drag & drop or <span class="font-semibold text-blue-600 underline">Browse</span>';
         }
@@ -1138,6 +1148,16 @@
             localCtx.scale(window.devicePixelRatio, window.devicePixelRatio);
           }
 
+          // ── Warped SVG preview path (SVG source + Paper.js warp engine) ──────
+          // When the source was an SVG and the warped preview is ready,
+          // draw the pre-rendered warped image directly — it already fills
+          // the shape's coordinate space so we just draw it at the shape bounds.
+          if (!isExport && warpedSVGPreviewImg && warpedSVGPreviewImg.complete && currentSVGRawText) {
+            localCtx.drawImage(warpedSVGPreviewImg, offsetX, offsetY, scaledW, scaledH);
+            localCtx.restore();
+            return;
+          }
+
           let imageOffsetX = 0;
           const needsHorizontalShift = ["500ml_round", "750ml_round", "1000ml_round", "450ml_round_square", "500ml_round_square"].includes(currentShape);
           if (needsHorizontalShift) imageOffsetX = isExport ? 22 : 5;
@@ -1229,6 +1249,56 @@
         drawShape(ctx, canvas.clientWidth, canvas.clientHeight, false, 1, true, true);
       }
 
+      /**
+       * Inline all <image> href/xlink:href attributes in an SVG document as
+       * base64 data URIs so the serialised SVG string is fully self-contained.
+       * Non-data-URI references are fetched/drawn via a canvas and replaced.
+       * Already-inlined data URIs are left untouched.
+       *
+       * @param {Document} svgDoc  - Parsed SVG document (in-place mutation)
+       * @returns {Promise<void>}
+       */
+      async function inlineSVGImages(svgDoc) {
+        const XLINK_NS = "http://www.w3.org/1999/xlink";
+        const imageEls = Array.from(svgDoc.querySelectorAll("image"));
+        if (!imageEls.length) return;
+
+        await Promise.all(imageEls.map(el => new Promise(resolve => {
+          const href = el.getAttribute("href") ||
+                       el.getAttributeNS(XLINK_NS, "href") || "";
+
+          // Already a data URI — nothing to do
+          if (!href || href.startsWith("data:")) { resolve(); return; }
+
+          const img = new Image();
+          img.crossOrigin = "anonymous";
+
+          img.onload = () => {
+            try {
+              const c = document.createElement("canvas");
+              c.width  = img.naturalWidth  || 1;
+              c.height = img.naturalHeight || 1;
+              c.getContext("2d").drawImage(img, 0, 0);
+              const dataUrl = c.toDataURL("image/png");
+              el.setAttribute("href", dataUrl);
+              el.setAttributeNS(XLINK_NS, "xlink:href", dataUrl);
+            } catch (e) {
+              // canvas tainted or other error — leave href as-is
+              console.warn("inlineSVGImages: could not inline", href, e);
+            }
+            resolve();
+          };
+
+          img.onerror = () => {
+            // Could not load — leave href as-is so the browser at least tries
+            console.warn("inlineSVGImages: failed to load", href);
+            resolve();
+          };
+
+          img.src = href;
+        })));
+      }
+
       async function processUploadedImage(img, shape) {
         updateLoading("Applying to shape...", "Almost done");
         
@@ -1242,6 +1312,12 @@
         currentImageDataUrl = tempCanvas.toDataURL("image/png");
         textureImageDataUrl = currentImageDataUrl;
 
+        // If source was an SVG, build the warped preview image now so the
+        // canvas shows the true vector warp immediately after upload.
+        if (currentSVGRawText) {
+          await buildWarpedPreview();
+        }
+
         await new Promise(r => setTimeout(r, 100));
 
         if (isModelLoaded && modelViewer.model) {
@@ -1251,6 +1327,60 @@
 
         mainDraw();
         hideLoading();
+      }
+
+      /**
+       * Build the warped SVG preview image that is drawn live on the canvas.
+       * Runs Paper.js envelope warp on the raw SVG and caches the result as
+       * an <img> element so renderImageContent() can draw it instantly.
+       */
+      async function buildWarpedPreview() {
+        const shape = getCurrentShape();
+        if (!shape || !currentSVGRawText) {
+          warpedSVGPreviewImg = null;
+          return;
+        }
+
+        try {
+          // Run the warp engine (same logic used for export)
+          const warpedSVGString = buildWarpedSVG(currentSVGRawText, shape);
+          if (!warpedSVGString) {
+            warpedSVGPreviewImg = null;
+            return;
+          }
+
+          // Load warped SVG into an <img> via Blob URL
+          await new Promise((resolve) => {
+            const blob = new Blob([warpedSVGString], { type: "image/svg+xml" });
+            const url  = URL.createObjectURL(blob);
+
+            const img = new Image();
+            img.width  = Math.round(shape.width);
+            img.height = Math.round(shape.height);
+
+            img.onload = () => {
+              // Release the old preview blob URL
+              if (warpedSVGPreviewImg && warpedSVGPreviewImg._blobUrl) {
+                URL.revokeObjectURL(warpedSVGPreviewImg._blobUrl);
+              }
+              img._blobUrl = url;
+              warpedSVGPreviewImg = img;
+              resolve();
+            };
+
+            img.onerror = () => {
+              URL.revokeObjectURL(url);
+              warpedSVGPreviewImg = null;
+              resolve();
+            };
+
+            img.src = url;
+          });
+
+        } catch (err) {
+          console.warn("buildWarpedPreview failed:", err);
+          warpedSVGPreviewImg = null;
+        }
       }
 
       async function handleImageUpload(event) {
@@ -1289,11 +1419,25 @@
               currentImage = null;
               currentImageDataUrl = null;
               textureImageDataUrl = null;
+              currentSVGRawText = null;
+              clearWarpedPreview();
               fileInput.value = "";
               updateUploadPlaceholder();
               mainDraw();
               return;
             }
+
+            // ── Inline all <image> hrefs as base64 data URIs ─────────────────
+            // Warped SVGs are loaded from Blob URLs; external image references
+            // are blocked by the browser in that context. Converting them to
+            // data URIs makes the serialised output fully self-contained.
+            updateLoading("Processing SVG...", "Inlining embedded images");
+            await inlineSVGImages(svgDoc);
+
+            // ── Store original raw SVG text for the vector-native warp export ──
+            // We save it AFTER inlining so the warp engine has access to the
+            // fully self-contained SVG with embedded image data.
+            currentSVGRawText = new XMLSerializer().serializeToString(svgDoc);
 
             let width = svgElement.getAttribute("width");
             let height = svgElement.getAttribute("height");
@@ -1310,14 +1454,31 @@
               }
             }
 
-            if (!width || !height || isNaN(width) || isNaN(height)) {
-              if (shape && shape.uploadDimensions) {
-                width = width || shape.uploadDimensions.width;
-                height = height || shape.uploadDimensions.height;
-              } else {
-                width = width || 1000;
-                height = height || 1000;
+            // Force high resolution for warping quality
+            if (shape && shape.uploadDimensions) {
+              // If SVG has dimensions, calculate aspect ratio
+              const aspectRatio = (width && height) ? width / height : 
+                                 (viewBox ? (() => {
+                                   const parts = viewBox.split(/[\s,]+/).map(parseFloat);
+                                   return parts.length === 4 ? parts[2] / parts[3] : shape.uploadDimensions.width / shape.uploadDimensions.height;
+                                 })() : shape.uploadDimensions.width / shape.uploadDimensions.height);
+
+              // Set width to match upload dimensions for best quality
+              width = shape.uploadDimensions.width;
+              height = width / aspectRatio; // Maintain aspect ratio
+              
+              // If the height is less than target, scale by height instead
+              if (height < shape.uploadDimensions.height) {
+                 height = shape.uploadDimensions.height;
+                 width = height * aspectRatio;
               }
+            } else {
+               // Fallback for no shape selected or no dims
+               if (!width || width < 2000) {
+                 const aspectRatio = (width && height) ? width / height : 1;
+                 width = 2000;
+                 height = width / aspectRatio;
+               }
             }
 
             svgElement.setAttribute("width", width);
@@ -1343,6 +1504,8 @@
                   currentImage = null;
                   currentImageDataUrl = null;
                   textureImageDataUrl = null;
+                  currentSVGRawText = null;
+                  clearWarpedPreview();
                   fileInput.value = "";
                   updateUploadPlaceholder();
                   URL.revokeObjectURL(url);
@@ -1368,6 +1531,8 @@
               currentImage = null;
               currentImageDataUrl = null;
               textureImageDataUrl = null;
+              currentSVGRawText = null;
+              clearWarpedPreview();
               fileInput.value = "";
               updateUploadPlaceholder();
               mainDraw();
@@ -1386,6 +1551,9 @@
 
           reader.readAsText(file);
         } else {
+          // Non-SVG upload — clear stored SVG source and warped preview
+          currentSVGRawText = null;
+          clearWarpedPreview();
           const reader = new FileReader();
           reader.onload = async function (e) {
             updateLoading("Processing image...", "Loading pixels");
@@ -1478,6 +1646,8 @@
         currentImage = null;
         currentImageDataUrl = null;
         textureImageDataUrl = null;
+        currentSVGRawText = null;
+        clearWarpedPreview();
         fileInput.value = "";
         // Reset zoom and pan when changing shape type
         zoomLevel = 1;
@@ -1502,6 +1672,8 @@
         currentImage = null;
         currentImageDataUrl = null;
         textureImageDataUrl = null;
+        currentSVGRawText = null;
+        clearWarpedPreview();
         fileInput.value = "";
         // Reset zoom and pan when changing shape
         zoomLevel = 1;
@@ -1634,11 +1806,420 @@
         return `${pc(cmyk.c)}% ${pc(cmyk.m)}% ${pc(cmyk.y)}% ${pc(cmyk.k)}%`;
       }
 
+      // ═══════════════════════════════════════════════════════════════════
+      // PAPER.JS SVG ENVELOPE WARP ENGINE
+      // Adapted from sample.html — maps source SVG through shape's bezier envelope.
+      // Uses Paper.js for path math; works with ANY path type (bezier, polyline, etc.)
+      // ═══════════════════════════════════════════════════════════════════
+
+      /** Number formatter */
+      function warpF(n) { return parseFloat(n.toFixed(4)); }
+
+      /**
+       * Creates a Paper.js evaluable path from an SVG path string.
+       * Returns null when the Paper.js library is not available.
+       */
+      function makePaperPath(d) {
+        try {
+          const p = new paper.Path(d);
+          return p;
+        } catch (e) {
+          return null;
+        }
+      }
+
+      /**
+       * Envelope transform: maps a point from source SVG coordinate space
+       * to the shape's envelope bezier mesh.
+       *
+       * @param {number} px  - x in source coordinates
+       * @param {number} py  - y in source coordinates
+       * @param {paper.Rectangle} srcBounds  - source viewBox rectangle
+       * @param {paper.Path} topPaperPath    - evaluated top edge path
+       * @param {paper.Path} bottomPaperPath - evaluated bottom edge path
+       * @param {boolean} topIsReversed      - whether top edge runs right-to-left at u=0
+       * @param {boolean} bottomIsReversed   - whether bottom edge runs right-to-left at u=0
+       * @returns {{ x: number, y: number }}
+       */
+      function envelopeTransformForShape(px, py, srcBounds, topPaperPath, bottomPaperPath, topIsReversed, bottomIsReversed) {
+        const u = Math.max(0, Math.min(1, (px - srcBounds.x) / srcBounds.width));
+        const v = Math.max(0, Math.min(1, (py - srcBounds.y) / srcBounds.height));
+
+        const topT   = topIsReversed    ? (1 - u) : u;
+        const bottomT = bottomIsReversed ? (1 - u) : u;
+
+        const topOffset    = topT    * topPaperPath.length;
+        const bottomOffset = bottomT * bottomPaperPath.length;
+
+        const topPt    = topPaperPath.getPointAt(topOffset);
+        const bottomPt = bottomPaperPath.getPointAt(bottomOffset);
+
+        return {
+          x: topPt.x * (1 - v) + bottomPt.x * v,
+          y: topPt.y * (1 - v) + bottomPt.y * v
+        };
+      }
+
+      /**
+       * Warp a Paper.js path through the envelope and return the new 'd' string.
+       */
+      function warpPaperPath(paperPath, srcBounds, topPP, bottomPP, topRev, botRev, precision, smoothFactor) {
+        if (!paperPath || !paperPath.length) return null;
+        const sampleCount = Math.max(20, Math.ceil(paperPath.length * precision * 0.5));
+        const warpedPath = new paper.Path();
+
+        for (let i = 0; i <= sampleCount; i++) {
+          const offset = (i / sampleCount) * paperPath.length;
+          const srcPt  = paperPath.getPointAt(offset);
+          if (!srcPt) continue;
+          const dst = envelopeTransformForShape(srcPt.x, srcPt.y, srcBounds, topPP, bottomPP, topRev, botRev);
+          i === 0 ? warpedPath.moveTo([dst.x, dst.y]) : warpedPath.lineTo([dst.x, dst.y]);
+        }
+
+        if (paperPath.closed) warpedPath.closePath();
+        if (smoothFactor > 0) warpedPath.smooth({ type: "catmull-rom", factor: smoothFactor });
+
+        warpedPath.strokeColor = paperPath.strokeColor;
+        warpedPath.fillColor   = paperPath.fillColor;
+        warpedPath.strokeWidth = paperPath.strokeWidth;
+        warpedPath.opacity     = paperPath.opacity;
+
+        const svg  = warpedPath.exportSVG({ asString: false });
+        const newD = svg.getAttribute("d");
+        warpedPath.remove();
+        return newD;
+      }
+
+      /** Tags whose children we skip entirely during warp */
+      const WARP_SKIP_TAGS = new Set([
+        "defs","style","script","metadata","title","desc",
+        "lineargradient","radialgradient","pattern","filter","clippath",
+        "mask","marker","symbol","stop","animate","animatetransform","set",
+        "font","font-face","glyph","missing-glyph"
+      ]);
+
+      const SHAPE_SKIP_ATTRS = {
+        rect:["x","y","width","height","rx","ry"],
+        circle:["cx","cy","r"],
+        ellipse:["cx","cy","rx","ry"],
+        line:["x1","y1","x2","y2"],
+        polyline:["points"],
+        polygon:["points"]
+      };
+
+      function copyAttrs(src, dst, skip = []) {
+        for (const attr of Array.from(src.attributes)) {
+          if (!skip.includes(attr.name)) dst.setAttribute(attr.name, attr.value);
+        }
+      }
+
+      function warpTranslateAttr(el, srcBounds, topPP, bottomPP, topRev, botRev) {
+        const t = el.getAttribute("transform");
+        if (!t) return;
+        const m = t.match(/translate\(\s*([-\d.eE+]+)[\s,]+([-\d.eE+]+)\s*\)/);
+        if (!m) return;
+        const wp = envelopeTransformForShape(parseFloat(m[1]), parseFloat(m[2]), srcBounds, topPP, bottomPP, topRev, botRev);
+        el.setAttribute("transform", t.replace(/translate\([^)]+\)/, `translate(${warpF(wp.x)},${warpF(wp.y)})`));
+      }
+
+      function warpImageEl(el, doc, ns, srcBounds, topPP, bottomPP, topRev, botRev) {
+        const x = parseFloat(el.getAttribute("x") || "0");
+        const y = parseFloat(el.getAttribute("y") || "0");
+        const w = parseFloat(el.getAttribute("width")  || "0");
+        const h = parseFloat(el.getAttribute("height") || "0");
+        const corners = [
+          envelopeTransformForShape(x,   y,   srcBounds, topPP, bottomPP, topRev, botRev),
+          envelopeTransformForShape(x+w, y,   srcBounds, topPP, bottomPP, topRev, botRev),
+          envelopeTransformForShape(x+w, y+h, srcBounds, topPP, bottomPP, topRev, botRev),
+          envelopeTransformForShape(x,   y+h, srcBounds, topPP, bottomPP, topRev, botRev),
+        ];
+        const xs = corners.map(c => c.x), ys = corners.map(c => c.y);
+        const minX = Math.min(...xs), maxX = Math.max(...xs);
+        const minY = Math.min(...ys), maxY = Math.max(...ys);
+
+        // ── Preserve image href before any DOM manipulation ──────────────────
+        // DOMParser/XMLSerializer can drop xlink:href when the namespace isn't
+        // fully tracked.  Snapshot both forms now and re-stamp after repositioning.
+        const XLINK_NS = "http://www.w3.org/1999/xlink";
+        const hrefVal      = el.getAttribute("href") ||
+                             el.getAttributeNS(XLINK_NS, "href") ||
+                             null;
+
+        let defs = doc.querySelector("defs");
+        if (!defs) { defs = doc.createElementNS(ns, "defs"); doc.documentElement.insertBefore(defs, doc.documentElement.firstChild); }
+        const clipId = "imgClip_" + Math.random().toString(36).slice(2, 9);
+        const clipEl = doc.createElementNS(ns, "clipPath");
+        clipEl.setAttribute("id", clipId);
+        const poly = doc.createElementNS(ns, "polygon");
+        poly.setAttribute("points", corners.map(c => `${warpF(c.x)},${warpF(c.y)}`).join(" "));
+        clipEl.appendChild(poly);
+        defs.appendChild(clipEl);
+
+        el.setAttribute("x",      warpF(minX));
+        el.setAttribute("y",      warpF(minY));
+        el.setAttribute("width",  warpF(maxX - minX));
+        el.setAttribute("height", warpF(maxY - minY));
+        el.setAttribute("preserveAspectRatio", "none");
+        el.setAttribute("clip-path", `url(#${clipId})`);
+
+        // ── Re-stamp image href (both forms) so it survives serialization ────
+        if (hrefVal) {
+          el.setAttribute("href", hrefVal);                              // SVG 2.0
+          el.setAttributeNS(XLINK_NS, "xlink:href", hrefVal);           // SVG 1.1
+        }
+      }
+
+      function warpNode(node, doc, ns, srcBounds, topPP, bottomPP, topRev, botRev, precision, smoothing) {
+        if (!node || node.nodeType !== 1) return;
+        const tag = (node.tagName || "").toLowerCase();
+        if (WARP_SKIP_TAGS.has(tag)) return;
+
+        paper.project.clear();
+
+        // ── PATH ──────────────────────────────────────────────────────────
+        if (tag === "path") {
+          const d = node.getAttribute("d");
+          if (d) {
+            try {
+              const pp = makePaperPath(d);
+              if (pp) {
+                const newD = warpPaperPath(pp, srcBounds, topPP, bottomPP, topRev, botRev, precision, smoothing);
+                pp.remove();
+                if (newD) node.setAttribute("d", newD);
+              }
+            } catch(e) { console.warn("warpNode path:", e); }
+          }
+          warpTranslateAttr(node, srcBounds, topPP, bottomPP, topRev, botRev);
+          paper.project.clear();
+          return;
+        }
+
+        // ── SHAPES → convert to path & warp ───────────────────────────────
+        if (["rect","circle","ellipse","line","polyline","polygon"].includes(tag)) {
+          try {
+            let pp = null;
+            switch (tag) {
+              case "rect": {
+                const rx = parseFloat(node.getAttribute("rx") || "0");
+                const ry = parseFloat(node.getAttribute("ry") || rx);
+                pp = new paper.Path.Rectangle({
+                  point: [parseFloat(node.getAttribute("x")||"0"), parseFloat(node.getAttribute("y")||"0")],
+                  size:  [parseFloat(node.getAttribute("width")||"0"), parseFloat(node.getAttribute("height")||"0")],
+                  ...(rx > 0 || ry > 0 ? { radius: [Math.min(rx, parseFloat(node.getAttribute("width")||"0")/2), Math.min(ry, parseFloat(node.getAttribute("height")||"0")/2)] } : {})
+                });
+                break;
+              }
+              case "circle":  pp = new paper.Path.Circle({ center: [parseFloat(node.getAttribute("cx")||"0"), parseFloat(node.getAttribute("cy")||"0")], radius: parseFloat(node.getAttribute("r")||"0") }); break;
+              case "ellipse": pp = new paper.Path.Ellipse({ center: [parseFloat(node.getAttribute("cx")||"0"), parseFloat(node.getAttribute("cy")||"0")], radius: [parseFloat(node.getAttribute("rx")||"0"), parseFloat(node.getAttribute("ry")||"0")] }); break;
+              case "line":    pp = new paper.Path.Line({ from: [parseFloat(node.getAttribute("x1")||"0"), parseFloat(node.getAttribute("y1")||"0")], to: [parseFloat(node.getAttribute("x2")||"0"), parseFloat(node.getAttribute("y2")||"0")] }); break;
+              case "polyline": case "polygon": {
+                const pts = (node.getAttribute("points")||"").trim().split(/[\s,]+/).map(Number);
+                const segs = [];
+                for (let i = 0; i < pts.length; i += 2) segs.push(new paper.Point(pts[i], pts[i+1]));
+                pp = new paper.Path(segs);
+                if (tag === "polygon") pp.closePath();
+                break;
+              }
+            }
+            if (pp) {
+              const newD = warpPaperPath(pp, srcBounds, topPP, bottomPP, topRev, botRev, precision, smoothing);
+              pp.remove();
+              if (newD) {
+                const pathEl = doc.createElementNS(ns, "path");
+                copyAttrs(node, pathEl, SHAPE_SKIP_ATTRS[tag] || []);
+                pathEl.setAttribute("d", newD);
+                warpTranslateAttr(pathEl, srcBounds, topPP, bottomPP, topRev, botRev);
+                node.parentNode.replaceChild(pathEl, node);
+              }
+            }
+          } catch(e) { console.warn("warpNode shape:", tag, e); }
+          paper.project.clear();
+          return;
+        }
+
+        // ── IMAGE ──────────────────────────────────────────────────────────
+        if (tag === "image") {
+          warpImageEl(node, doc, ns, srcBounds, topPP, bottomPP, topRev, botRev);
+          paper.project.clear();
+          return;
+        }
+
+        // ── TEXT / TSPAN ───────────────────────────────────────────────────
+        if (tag === "text" || tag === "tspan") {
+          if (node.hasAttribute("x") || node.hasAttribute("y")) {
+            const wp = envelopeTransformForShape(
+              parseFloat(node.getAttribute("x") || "0"),
+              parseFloat(node.getAttribute("y") || "0"),
+              srcBounds, topPP, bottomPP, topRev, botRev
+            );
+            if (node.hasAttribute("x")) node.setAttribute("x", warpF(wp.x));
+            if (node.hasAttribute("y")) node.setAttribute("y", warpF(wp.y));
+          }
+          warpTranslateAttr(node, srcBounds, topPP, bottomPP, topRev, botRev);
+          Array.from(node.children).forEach(c =>
+            warpNode(c, doc, ns, srcBounds, topPP, bottomPP, topRev, botRev, precision, smoothing)
+          );
+          paper.project.clear();
+          return;
+        }
+
+        // ── USE ────────────────────────────────────────────────────────────
+        if (tag === "use") {
+          const wp = envelopeTransformForShape(
+            parseFloat(node.getAttribute("x") || "0"),
+            parseFloat(node.getAttribute("y") || "0"),
+            srcBounds, topPP, bottomPP, topRev, botRev
+          );
+          node.setAttribute("x", warpF(wp.x));
+          node.setAttribute("y", warpF(wp.y));
+          warpTranslateAttr(node, srcBounds, topPP, bottomPP, topRev, botRev);
+          paper.project.clear();
+          return;
+        }
+
+        // ── GROUPS / CONTAINERS ────────────────────────────────────────────
+        if (tag === "g" || tag === "a" || tag === "svg") {
+          warpTranslateAttr(node, srcBounds, topPP, bottomPP, topRev, botRev);
+          Array.from(node.children).forEach(c =>
+            warpNode(c, doc, ns, srcBounds, topPP, bottomPP, topRev, botRev, precision, smoothing)
+          );
+          paper.project.clear();
+          return;
+        }
+
+        // ── FALLBACK ───────────────────────────────────────────────────────
+        Array.from(node.children).forEach(c =>
+          warpNode(c, doc, ns, srcBounds, topPP, bottomPP, topRev, botRev, precision, smoothing)
+        );
+        paper.project.clear();
+      }
+
+      /**
+       * Build a warped SVG string from the uploaded SVG source, using the
+       * selected shape's topPath / bottomPath as the envelope bezier curves.
+       *
+       * @param {string} rawSvgText  - Original SVG source text
+       * @param {object} shape       - Current shape definition
+       * @returns {string|null}      - Warped SVG string, or null on failure
+       */
+      function buildWarpedSVG(rawSvgText, shape) {
+        if (typeof paper === "undefined" || !paper.project) {
+          console.warn("Paper.js not available — falling back to raster export");
+          return null;
+        }
+
+        try {
+          const parser   = new DOMParser();
+          const doc      = parser.parseFromString(rawSvgText, "image/svg+xml");
+          if (doc.querySelector("parsererror")) return null;
+
+          const root = doc.documentElement;
+          const ns   = root.getAttribute("xmlns") || "http://www.w3.org/2000/svg";
+
+          // ── Guarantee xlink namespace is declared on the root ────────────
+          // XMLSerializer drops xlink:href on <image> elements when the
+          // xmlns:xlink declaration is missing from the root element.
+          const XLINK_NS = "http://www.w3.org/1999/xlink";
+          if (!root.getAttribute("xmlns:xlink")) {
+            root.setAttributeNS("http://www.w3.org/2000/xmlns/", "xmlns:xlink", XLINK_NS);
+          }
+
+          // ── Determine source coordinate bounds ──────────────────────────
+          let srcBounds;
+          const vb = root.getAttribute("viewBox");
+          if (vb) {
+            const parts = vb.trim().split(/[\s,]+/).map(parseFloat);
+            if (parts.length >= 4 && parts[2] > 0 && parts[3] > 0)
+              srcBounds = new paper.Rectangle(parts[0], parts[1], parts[2], parts[3]);
+          }
+          if (!srcBounds) {
+            const w = parseFloat(root.getAttribute("width")  || "0");
+            const h = parseFloat(root.getAttribute("height") || "0");
+            srcBounds = (w > 0 && h > 0)
+              ? new paper.Rectangle(0, 0, w, h)
+              : new paper.Rectangle(0, 0, shape.width, shape.height);
+          }
+
+          // ── Build Paper.js paths for the top & bottom bezier curves ─────
+          paper.project.clear();
+          const topPP    = makePaperPath(shape.topPath);
+          const bottomPP = makePaperPath(shape.bottomPath);
+          paper.project.clear();
+
+          if (!topPP || !bottomPP) {
+            console.warn("Could not create Paper.js paths for shape envelope");
+            return null;
+          }
+
+          // ── Rewire output viewBox to match shape bounds ──────────────────
+          root.setAttribute("viewBox", `0 0 ${shape.width} ${shape.height}`);
+          root.setAttribute("width",   shape.width);
+          root.setAttribute("height",  shape.height);
+
+          // ── Ensure <defs> exists ─────────────────────────────────────────
+          let defs = root.querySelector("defs");
+          if (!defs) {
+            defs = doc.createElementNS(ns, "defs");
+            root.insertBefore(defs, root.firstChild);
+          }
+
+          // ── Add shape clip-path ──────────────────────────────────────────
+          const clipId   = "envelopeClip_" + Date.now();
+          const clipEl   = doc.createElementNS(ns, "clipPath");
+          clipEl.setAttribute("id", clipId);
+          const clipPath = doc.createElementNS(ns, "path");
+          clipPath.setAttribute("d", shape.path);
+          clipEl.appendChild(clipPath);
+          defs.appendChild(clipEl);
+
+          // ── Wrap all non-defs content in a clipped group ─────────────────
+          const drawKids = Array.from(root.children).filter(el => el.tagName.toLowerCase() !== "defs");
+          const wrapper  = doc.createElementNS(ns, "g");
+          wrapper.setAttribute("clip-path", `url(#${clipId})`);
+          wrapper.setAttribute("id", "envelopeWarp");
+          drawKids.forEach(k => { root.removeChild(k); wrapper.appendChild(k); });
+          root.appendChild(wrapper);
+
+          // ── Warp all children in the wrapper ─────────────────────────────
+          Array.from(wrapper.children).forEach(child =>
+            warpNode(child, doc, ns, srcBounds, topPP, bottomPP,
+                     shape.topIsReversed, shape.bottomIsReversed, 2, 0.5)
+          );
+
+          // Cleanup Paper.js paths
+          topPP.remove();
+          bottomPP.remove();
+          paper.project.clear();
+
+          // ── Optional shape outline ───────────────────────────────────────
+          const outlineEl = doc.createElementNS(ns, "path");
+          outlineEl.setAttribute("d", shape.path);
+          outlineEl.setAttribute("fill", "none");
+          outlineEl.setAttribute("stroke", "none");
+          outlineEl.setAttribute("id", "envelopeOutline");
+          root.appendChild(outlineEl);
+
+          return new XMLSerializer().serializeToString(doc);
+
+        } catch (err) {
+          console.error("buildWarpedSVG failed:", err);
+          return null;
+        }
+      }
+
       function createSVGString() {
         const shape = getCurrentShape();
         if (!shape) return null;
-        let svgContent = "";
 
+        // ── VECTOR PATH: source was an SVG file ──────────────────────────
+        if (currentImage && currentSVGRawText) {
+          const warped = buildWarpedSVG(currentSVGRawText, shape);
+          if (warped) return warped;
+          // Paper.js unavailable or failed → fall through to raster
+        }
+
+        // ── RASTER FALLBACK ───────────────────────────────────────────────
+        let svgContent = "";
         if (currentImage) {
           const exportWidth = shape.width * EXPORT_SCALE;
           const exportHeight = shape.height * EXPORT_SCALE;
@@ -1870,6 +2451,16 @@
 
       // --- Initialization ---
       function initializeApp() {
+        // Initialise Paper.js with the hidden off-screen canvas
+        try {
+          const paperCanvas = document.getElementById("paperCanvas");
+          if (paperCanvas && typeof paper !== "undefined") {
+            paper.setup(paperCanvas);
+          }
+        } catch (e) {
+          console.warn("Paper.js setup failed:", e);
+        }
+
         preProcessShapes();
         populateShapeTypes();
         toggleViewSelector();

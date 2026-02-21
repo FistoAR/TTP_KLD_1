@@ -24,6 +24,13 @@
     </script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/paper.js/0.12.17/paper-full.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    <script>
+      // Initialize pdf.js worker
+      if (window['pdfjs-dist/build/pdf']) {
+        window['pdfjs-dist/build/pdf'].GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+      }
+    </script>
     <script
       type="module"
       src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.3.0/model-viewer.min.js"
@@ -59,7 +66,7 @@
         <div id="dropArea" class="flex flex-col">
           <label for="imageUpload" class="text-[0.8vw] font-semibold text-slate-600 mb-[0.3vh]">Upload Label:</label>
           <label class="file-upload-label h-[2.4vw] min-w-[13vw] flex items-center justify-center px-[0.9vw] bg-slate-50 border border-dashed border-slate-400 rounded-md cursor-pointer hover:border-blue-500 transition [&.dragover]:border-blue-500" for="imageUpload">
-            <input type="file" id="imageUpload" class="hidden" accept="image/*,.svg" />
+            <input type="file" id="imageUpload" class="hidden" accept="image/*,.svg,.ai" />
             <small id="uploadText" class="font-medium text-slate-700 text-[0.8vw]">Drag & drop or <span class="font-semibold text-blue-600 underline">Browse</span></small>
           </label>
         </div>

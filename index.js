@@ -1400,7 +1400,63 @@
         showLoading("Loading image...", "Reading file");
 
         const isSVG = file.type === "image/svg+xml" || file.name.toLowerCase().endsWith(".svg");
+        const isAI = file.name.toLowerCase().endsWith(".ai");
         const shape = getCurrentShape();
+
+        if (isAI) {
+          const reader = new FileReader();
+          reader.onload = async function (e) {
+            updateLoading("Processing AI file...", "Rendering content");
+            try {
+              const loadingTask = pdfjsLib.getDocument({ data: e.target.result });
+              const pdf = await loadingTask.promise;
+              const page = await pdf.getPage(1);
+              
+              // Calculate scale to match required upload dimensions or minimum 3000px width
+              const targetWidth = shape && shape.uploadDimensions ? shape.uploadDimensions.width : 3000;
+              const viewportOriginal = page.getViewport({ scale: 1.0 });
+              const scale = targetWidth / viewportOriginal.width;
+              const viewport = page.getViewport({ scale });
+              
+              const tempCanvas = document.createElement("canvas");
+              const context = tempCanvas.getContext("2d");
+              tempCanvas.width = viewport.width;
+              tempCanvas.height = viewport.height;
+              
+              await page.render({ canvasContext: context, viewport: viewport }).promise;
+              
+              const img = new Image();
+              img.onload = async () => {
+                if (shape && shape.uploadDimensions) {
+                  if (img.width < shape.uploadDimensions.width || img.height < shape.uploadDimensions.height) {
+                    hideLoading();
+                    showError("Image Too Small", `The rendered AI dimensions (${img.width} × ${img.height}px) are smaller than required.\n\nMinimum size: ${shape.uploadDimensions.width} × ${shape.uploadDimensions.height}px`);
+                    return;
+                  }
+                }
+                
+                const fullName = file.name;
+                const dotIndex = fullName.lastIndexOf(".");
+                let name = dotIndex !== -1 ? fullName.substring(0, dotIndex) : fullName;
+                const ext = dotIndex !== -1 ? fullName.substring(dotIndex) : "";
+                if (name.length > 12) name = name.substring(0, 12) + "...";
+                uploadText.textContent = `${name}${ext}`;
+                
+                await processUploadedImage(img, shape);
+              };
+              img.src = tempCanvas.toDataURL("image/png");
+              
+            } catch (err) {
+              console.error("AI rendering failed:", err);
+              hideLoading();
+              showError("Invalid AI File", "The Adobe Illustrator file could not be parsed. Please ensure it was saved with 'Create PDF Compatible File' checked in Illustrator.");
+              fileInput.value = "";
+              updateUploadPlaceholder();
+            }
+          };
+          reader.readAsArrayBuffer(file);
+          return;
+        }
 
         if (isSVG) {
           const reader = new FileReader();
@@ -1814,7 +1870,7 @@
       // ═══════════════════════════════════════════════════════════════════
 
       /** Number formatter */
-      function warpF(n) { return parseFloat(n.toFixed(4)); }
+      function warpF(n) { return parseFloat(n.toFixed(6)); }
 
       /**
        * Creates a Paper.js path from an SVG path string.
@@ -1860,8 +1916,8 @@
        * @returns {{ x: number, y: number }}
        */
       function envelopeTransformForShape(px, py, srcBounds, topPaperPath, bottomPaperPath, topIsReversed, bottomIsReversed) {
-        const u = Math.max(0, Math.min(1, (px - srcBounds.x) / srcBounds.width));
-        const v = Math.max(0, Math.min(1, (py - srcBounds.y) / srcBounds.height));
+        const u = srcBounds.width > 0  ? Math.max(0, Math.min(1, (px - srcBounds.x) / srcBounds.width))  : 0.5;
+        const v = srcBounds.height > 0 ? Math.max(0, Math.min(1, (py - srcBounds.y) / srcBounds.height)) : 0.5;
 
         const topT   = topIsReversed    ? (1 - u) : u;
         const bottomT = bottomIsReversed ? (1 - u) : u;
@@ -1891,14 +1947,10 @@
       /**
        * Determine how many subdivisions a straight-line segment needs so
        * the warped result closely follows the curved envelope.
-       *
-       * We sample the midpoint of the source line through the envelope
-       * and compare it with the midpoint of the warped endpoints.
-       * If the deviation exceeds a threshold, we subdivide recursively.
-       *
-       * @returns {number} recommended subdivision count (1 = no subdivision)
+       * 
+       * Updated to handle higher precision for "perfect" vector output.
        */
-      function adaptiveLineSubdivisions(p0, p1, srcBounds, topPP, bottomPP, topRev, botRev, maxDepth = 4) {
+      function adaptiveLineSubdivisions(p0, p1, srcBounds, topPP, bottomPP, topRev, botRev, maxDepth = 8) {
         const wp0 = warpPoint(p0, srcBounds, topPP, bottomPP, topRev, botRev);
         const wp1 = warpPoint(p1, srcBounds, topPP, bottomPP, topRev, botRev);
         const mid = { x: (p0.x + p1.x) / 2, y: (p0.y + p1.y) / 2 };
@@ -1906,8 +1958,8 @@
         const linearMid = { x: (wp0.x + wp1.x) / 2, y: (wp0.y + wp1.y) / 2 };
         const deviation = Math.hypot(wMid.x - linearMid.x, wMid.y - linearMid.y);
 
-        // Threshold: 0.5 SVG units — sub-pixel accuracy
-        if (deviation < 0.5 || maxDepth <= 0) return 1;
+        // Threshold: 0.1 SVG units — improved perfection for vector paths
+        if (deviation < 0.1 || maxDepth <= 0) return 1;
 
         // Recursively check each half
         const leftSubs  = adaptiveLineSubdivisions(p0, mid, srcBounds, topPP, bottomPP, topRev, botRev, maxDepth - 1);
@@ -1947,7 +1999,7 @@
        *
        * @returns {number} recommended number of subdivisions (power of 2)
        */
-      function adaptiveBezierSubdivisions(p0, cp1, cp2, p3, srcBounds, topPP, bottomPP, topRev, botRev, maxDepth = 3) {
+      function adaptiveBezierSubdivisions(p0, cp1, cp2, p3, srcBounds, topPP, bottomPP, topRev, botRev, maxDepth = 6) {
         // Sample the actual bezier at t=0.25, 0.5, 0.75
         const bezierAt = (t) => {
           const mt = 1 - t;
@@ -1979,8 +2031,8 @@
           if (dev > maxDeviation) maxDeviation = dev;
         }
 
-        // Threshold: 1.0 SVG unit — allows smooth curves while catching big distortions
-        if (maxDeviation < 1.0 || maxDepth <= 0) return 1;
+        // Threshold: 0.1 SVG unit — improved perfection for vector paths
+        if (maxDeviation < 0.1 || maxDepth <= 0) return 1;
         return 2; // subdivide once, then recursively re-check
       }
 
@@ -2023,26 +2075,30 @@
        * Warp a straight line segment with adaptive subdivision so it follows
        * the curve of the envelope. Emits cubicCurveTo segments into resultPath.
        */
-      function warpLineSegment(resultPath, p0, p1, srcBounds, topPP, bottomPP, topRev, botRev) {
-        const subdivs = Math.max(1, adaptiveLineSubdivisions(p0, p1, srcBounds, topPP, bottomPP, topRev, botRev, 5));
-        for (let i = 0; i < subdivs; i++) {
-          const t0 = i / subdivs;
-          const t1 = (i + 1) / subdivs;
-          // Source sub-segment endpoints
-          const sp0 = { x: p0.x + (p1.x - p0.x) * t0, y: p0.y + (p1.y - p0.y) * t0 };
-          const sp1 = { x: p0.x + (p1.x - p0.x) * t1, y: p0.y + (p1.y - p0.y) * t1 };
-          // Source sub-segment 1/3 and 2/3 points for cubic approximation
-          const scp1 = { x: sp0.x + (sp1.x - sp0.x) / 3, y: sp0.y + (sp1.y - sp0.y) / 3 };
-          const scp2 = { x: sp0.x + (sp1.x - sp0.x) * 2 / 3, y: sp0.y + (sp1.y - sp0.y) * 2 / 3 };
-          // Warp all four points
+      function warpLineSegment(resultPath, p0, p1, srcBounds, topPP, bottomPP, topRev, botRev, depth = 8) {
+        const wp0 = warpPoint(p0, srcBounds, topPP, bottomPP, topRev, botRev);
+        const wp1 = warpPoint(p1, srcBounds, topPP, bottomPP, topRev, botRev);
+        const mid = { x: (p0.x + p1.x) / 2, y: (p0.y + p1.y) / 2 };
+        const wMid = warpPoint(mid, srcBounds, topPP, bottomPP, topRev, botRev);
+        const linearMid = { x: (wp0.x + wp1.x) / 2, y: (wp0.y + wp1.y) / 2 };
+        const deviation = Math.hypot(wMid.x - linearMid.x, wMid.y - linearMid.y);
+
+        // Threshold: 0.1 SVG units — improved perfection for vector paths
+        if (deviation < 0.1 || depth <= 0) {
+          // Approximate this line sub-segment with a cubic bezier to match curvature better
+          const scp1 = { x: p0.x + (p1.x - p0.x) / 3, y: p0.y + (p1.y - p0.y) / 3 };
+          const scp2 = { x: p0.x + (p1.x - p0.x) * 2 / 3, y: p0.y + (p1.y - p0.y) * 2 / 3 };
           const wcp1 = warpPoint(scp1, srcBounds, topPP, bottomPP, topRev, botRev);
           const wcp2 = warpPoint(scp2, srcBounds, topPP, bottomPP, topRev, botRev);
-          const wp1  = warpPoint(sp1,  srcBounds, topPP, bottomPP, topRev, botRev);
+          
           resultPath.cubicCurveTo(
             new paper.Point(wcp1.x, wcp1.y),
             new paper.Point(wcp2.x, wcp2.y),
             new paper.Point(wp1.x,  wp1.y)
           );
+        } else {
+          warpLineSegment(resultPath, p0, mid, srcBounds, topPP, bottomPP, topRev, botRev, depth - 1);
+          warpLineSegment(resultPath, mid, p1, srcBounds, topPP, bottomPP, topRev, botRev, depth - 1);
         }
       }
 
@@ -2084,7 +2140,7 @@
             // This is a cubic bezier segment
             const cp1 = { x: p0.x + handleOut.x, y: p0.y + handleOut.y };
             const cp2 = { x: p3.x + handleIn.x,  y: p3.y + handleIn.y  };
-            warpBezierSegment(resultPath, p0, cp1, cp2, p3, srcBounds, topPP, bottomPP, topRev, botRev, 4);
+            warpBezierSegment(resultPath, p0, cp1, cp2, p3, srcBounds, topPP, bottomPP, topRev, botRev, 6);
           } else {
             // Straight line — needs adaptive subdivision for curved envelopes
             warpLineSegment(resultPath, p0, p3, srcBounds, topPP, bottomPP, topRev, botRev);
@@ -2239,28 +2295,37 @@
        * After this runs, NO element will have a `transform` attribute —
        * all coordinates are in absolute SVG viewport space.
        */
-      function flattenSVGTransforms(node, parentMatrix, ns) {
+      function flattenSVGTransforms(node, parentMatrix, ns, isRoot = false) {
         if (!node || node.nodeType !== 1) return;
         const tag = (node.tagName || "").toLowerCase();
         if (WARP_SKIP_TAGS.has(tag)) return;
 
         // Compose this node's local transform with the inherited parent matrix
         const localM = parseSVGTransform(node.getAttribute("transform"));
-        const cumM   = _mmul(parentMatrix, localM);
+        let cumM   = _mmul(parentMatrix, localM);
+
+        // Handle nested SVG viewports (x, y, width, height)
+        if (tag === "svg" && !isRoot) {
+            const x = parseFloat(node.getAttribute("x") || "0");
+            const y = parseFloat(node.getAttribute("y") || "0");
+            if (x !== 0 || y !== 0) {
+                cumM = _mmul(cumM, [1, 0, 0, 1, x, y]);
+            }
+        }
 
         // Remove the transform attribute — coordinates will be absolute
         if (node.hasAttribute("transform")) node.removeAttribute("transform");
 
         // ── GROUPS / CONTAINERS: propagate matrix to children ──────────────
         if (tag === "g" || tag === "a" || tag === "svg") {
-          Array.from(node.children).forEach(c => flattenSVGTransforms(c, cumM, ns));
+          Array.from(node.children).forEach(c => flattenSVGTransforms(c, cumM, ns, false));
           return;
         }
 
         // If matrix is identity, nothing to transform on leaf elements
         if (_isIdentity(cumM)) {
           // Still recurse into children (e.g. text > tspan)
-          Array.from(node.children).forEach(c => flattenSVGTransforms(c, _IDENTITY_M.slice(), ns));
+          Array.from(node.children).forEach(c => flattenSVGTransforms(c, _IDENTITY_M.slice(), ns, false));
           return;
         }
 
@@ -2329,7 +2394,7 @@
           if (Math.abs(sx-1) > 0.01 || Math.abs(sy-1) > 0.01) parts.push(`scale(${warpF(sx)},${warpF(sy)})`);
           if (parts.length) node.setAttribute("transform", parts.join(" "));
           // Recurse into tspan children with identity (already resolved)
-          Array.from(node.children).forEach(c => flattenSVGTransforms(c, _IDENTITY_M.slice(), ns));
+          Array.from(node.children).forEach(c => flattenSVGTransforms(c, _IDENTITY_M.slice(), ns, false));
           return;
         }
 
@@ -2362,7 +2427,7 @@
         }
 
         // ── FALLBACK: recurse ──────────────────────────────────────────────
-        Array.from(node.children).forEach(c => flattenSVGTransforms(c, cumM, ns));
+        Array.from(node.children).forEach(c => flattenSVGTransforms(c, cumM, ns, false));
       }
 
       // ═══════════════════════════════════════════════════════════════════
@@ -2559,11 +2624,31 @@
               srcBounds = new paper.Rectangle(parts[0], parts[1], parts[2], parts[3]);
           }
           if (!srcBounds) {
-            const w = parseFloat(root.getAttribute("width")  || "0");
-            const h = parseFloat(root.getAttribute("height") || "0");
-            srcBounds = (w > 0 && h > 0)
-              ? new paper.Rectangle(0, 0, w, h)
-              : new paper.Rectangle(0, 0, shape.width, shape.height);
+            const wAttr = root.getAttribute("width");
+            const hAttr = root.getAttribute("height");
+            if (wAttr && hAttr) {
+              srcBounds = new paper.Rectangle(0, 0, parseFloat(wAttr), parseFloat(hAttr));
+            } else {
+              // Final fallback: Use Paper.js to measure the actual content bounds
+              // This handles SVGs with no viewBox/width/height reliably.
+              const tempGroup = new paper.Group();
+              try {
+                paper.project.importSVG(rawSvgText, {
+                    expandShapes: true,
+                    insert: true,
+                    onLoad: (item) => { tempGroup.addChild(item); }
+                });
+                const bounds = tempGroup.bounds;
+                if (bounds.width > 0 && bounds.height > 0) {
+                   srcBounds = new paper.Rectangle(bounds.x, bounds.y, bounds.width, bounds.height);
+                }
+              } catch (e) { console.warn("Bounds measurement failed:", e); }
+              
+              if (!srcBounds) {
+                srcBounds = new paper.Rectangle(0, 0, shape.width, shape.height);
+              }
+              tempGroup.remove();
+            }
           }
 
           // ── Build Paper.js paths for the top & bottom bezier curves ─────
@@ -2586,7 +2671,7 @@
             el.tagName && el.tagName.toLowerCase() !== "defs"
           );
           drawContent.forEach(child =>
-            flattenSVGTransforms(child, _IDENTITY_M.slice(), ns)
+            flattenSVGTransforms(child, _IDENTITY_M.slice(), ns, true)
           );
 
           // ── Rewire output viewBox to match shape bounds ──────────────────

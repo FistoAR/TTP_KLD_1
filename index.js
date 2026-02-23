@@ -423,7 +423,7 @@
           topIsReversed: false,
           bottomIsReversed: true,
           modelPath: "./assets/models/300ml_round_container.glb",
-          targetMaterials: ["Bottom", "Label", "Wrap"],
+          targetMaterials: ["material"],
         },
          "500ml_round": {
           type: "round",
@@ -440,7 +440,7 @@
           topIsReversed: false,
           bottomIsReversed: true,
           modelPath: "./assets/models/500ml_round_container_t.glb",
-          targetMaterials: [" Texture"],
+          targetMaterials: ["Texture"],
         },
         "750ml_round": {
           type: "round",
@@ -640,7 +640,7 @@
           name: "500g Sweet Box TE",
           width: 695.7,
           height: 560.63,
-          uploadDimensions: { width: 7446, height: 403 },
+          uploadDimensions: { width: 746, height: 403 },
           path: "M 122.64 3.76 122.39 .92 572.87 .5 572.62 3.34 563.84 104.14 564.26 104.14 566.94 104.29 569.58 104.7 572.17 105.36 574.68 106.27 577.09 107.42 579.38 108.8 581.52 110.39 583.5 112.18 585.29 114.16 586.88 116.3 588.26 118.59 589.41 121 590.32 123.51 590.98 126.1 591.39 128.74 591.54 131.41 591.54 131.84 692.37 123.05 695.2 122.78 695.2 437.82 692.37 437.58 591.54 428.8 591.54 429.22 591.28 432.82 590.5 436.5 589.18 440.16 587.3 443.69 584.89 446.96 582 449.84 578.74 452.26 575.21 454.14 571.54 455.46 567.86 456.23 564.26 456.5 563.84 456.5 572.62 557.3 572.88 560.13 122.39 559.7 122.64 556.87 131.39 456.5 130.96 456.5 127.37 456.23 123.69 455.46 120.02 454.14 116.49 452.26 113.23 449.84 110.34 446.96 107.93 443.69 106.05 440.16 104.72 436.5 103.95 432.82 103.69 429.22 103.69 428.99 103.69 428.8 3.34 437.54 .5 437.78 .5 122.84 3.34 123.09 103.69 131.84 103.69 131.64 103.69 131.41 103.95 127.82 104.72 124.14 106.05 120.47 107.93 116.94 110.34 113.68 113.23 110.79 116.49 108.38 120.02 106.5 123.69 105.17 127.37 104.4 130.96 104.14 131.39 104.14 122.64 3.76 Z",
           topPath: "M 131.39 104.14 H 563.84",
           bottomPath: "M 131.39 456.5 H 563.84",
@@ -1915,9 +1915,32 @@
        * @param {boolean} bottomIsReversed   - whether bottom edge runs right-to-left at u=0
        * @returns {{ x: number, y: number }}
        */
-      function envelopeTransformForShape(px, py, srcBounds, topPaperPath, bottomPaperPath, topIsReversed, bottomIsReversed) {
-        const u = srcBounds.width > 0  ? Math.max(0, Math.min(1, (px - srcBounds.x) / srcBounds.width))  : 0.5;
-        const v = srcBounds.height > 0 ? Math.max(0, Math.min(1, (py - srcBounds.y) / srcBounds.height)) : 0.5;
+      function envelopeTransformForShape(px, py, srcBounds, topPaperPath, bottomPaperPath, topIsReversed, bottomIsReversed, shape) {
+        let u = srcBounds.width > 0  ? (px - srcBounds.x) / srcBounds.width  : 0.5;
+        let v = srcBounds.height > 0 ? (py - srcBounds.y) / srcBounds.height : 0.5;
+
+        // Apply sweet_box bleeding extensions similar to raster drawWarp
+        if (shape) {
+          const isSweetBox = shape.type === "sweet_box" || shape.type === "sweet_box_te";
+          const isWideShape = shape.type === "round_square";
+          const isLargeRound = shape.type === "round" && ["300ml","500ml","750ml","1000ml"].some(x => shape.name.includes(x));
+          
+          let edgeExt = 0;
+          let viewExt = 0; // vertical extension
+          
+          if (isSweetBox) { edgeExt = 0.03; viewExt = 40; }
+          // if (isWideShape) { viewExt = 22; }
+          // if (shape.type === "round" && !shape.name.includes("250ml")) { viewExt = 10; }
+
+          if (edgeExt > 0) {
+            u = u * (1 + 2 * edgeExt) - edgeExt;
+          }
+          if (viewExt > 0) {
+            // Normalize viewExt relative to the shape height to extend v
+            const vExtRatio = viewExt / shape.height;
+            v = v * (1 + 2 * vExtRatio) - vExtRatio;
+          }
+        }
 
         const topT   = topIsReversed    ? (1 - u) : u;
         const bottomT = bottomIsReversed ? (1 - u) : u;
@@ -1925,8 +1948,22 @@
         const topOffset    = topT    * topPaperPath.length;
         const bottomOffset = bottomT * bottomPaperPath.length;
 
-        const topPt    = topPaperPath.getPointAt(topOffset)    || topPaperPath.getPointAt(0);
-        const bottomPt = bottomPaperPath.getPointAt(bottomOffset) || bottomPaperPath.getPointAt(0);
+        function getPtEx(path, offset) {
+            if (offset < 0) {
+                const p0 = path.getPointAt(0);
+                const tan = path.getTangentAt(0);
+                return (p0 && tan) ? { x: p0.x + tan.x * offset, y: p0.y + tan.y * offset } : p0;
+            } else if (offset > path.length) {
+                const diff = offset - path.length;
+                const p1 = path.getPointAt(path.length);
+                const tan = path.getTangentAt(path.length);
+                return (p1 && tan) ? { x: p1.x + tan.x * diff, y: p1.y + tan.y * diff } : p1;
+            }
+            return path.getPointAt(offset);
+        }
+
+        const topPt    = getPtEx(topPaperPath, topOffset)    || topPaperPath.getPointAt(0);
+        const bottomPt = getPtEx(bottomPaperPath, bottomOffset) || bottomPaperPath.getPointAt(0);
 
         if (!topPt || !bottomPt) return { x: px, y: py }; // safety fallback
 
@@ -1940,8 +1977,8 @@
        * Transform a single {x,y} point through the envelope.
        * Convenience wrapper that handles edge-case null returns.
        */
-      function warpPoint(pt, srcBounds, topPP, bottomPP, topRev, botRev) {
-        return envelopeTransformForShape(pt.x, pt.y, srcBounds, topPP, bottomPP, topRev, botRev);
+      function warpPoint(pt, srcBounds, topPP, bottomPP, topRev, botRev, shape) {
+        return envelopeTransformForShape(pt.x, pt.y, srcBounds, topPP, bottomPP, topRev, botRev, shape);
       }
 
       /**
@@ -1950,11 +1987,11 @@
        * 
        * Updated to handle higher precision for "perfect" vector output.
        */
-      function adaptiveLineSubdivisions(p0, p1, srcBounds, topPP, bottomPP, topRev, botRev, maxDepth = 8) {
-        const wp0 = warpPoint(p0, srcBounds, topPP, bottomPP, topRev, botRev);
-        const wp1 = warpPoint(p1, srcBounds, topPP, bottomPP, topRev, botRev);
+      function adaptiveLineSubdivisions(p0, p1, srcBounds, topPP, bottomPP, topRev, botRev, shape, maxDepth = 8) {
+        const wp0 = warpPoint(p0, srcBounds, topPP, bottomPP, topRev, botRev, shape);
+        const wp1 = warpPoint(p1, srcBounds, topPP, bottomPP, topRev, botRev, shape);
         const mid = { x: (p0.x + p1.x) / 2, y: (p0.y + p1.y) / 2 };
-        const wMid = warpPoint(mid, srcBounds, topPP, bottomPP, topRev, botRev);
+        const wMid = warpPoint(mid, srcBounds, topPP, bottomPP, topRev, botRev, shape);
         const linearMid = { x: (wp0.x + wp1.x) / 2, y: (wp0.y + wp1.y) / 2 };
         const deviation = Math.hypot(wMid.x - linearMid.x, wMid.y - linearMid.y);
 
@@ -1962,8 +1999,8 @@
         if (deviation < 0.1 || maxDepth <= 0) return 1;
 
         // Recursively check each half
-        const leftSubs  = adaptiveLineSubdivisions(p0, mid, srcBounds, topPP, bottomPP, topRev, botRev, maxDepth - 1);
-        const rightSubs = adaptiveLineSubdivisions(mid, p1, srcBounds, topPP, bottomPP, topRev, botRev, maxDepth - 1);
+        const leftSubs  = adaptiveLineSubdivisions(p0, mid, srcBounds, topPP, bottomPP, topRev, botRev, shape, maxDepth - 1);
+        const rightSubs = adaptiveLineSubdivisions(mid, p1, srcBounds, topPP, bottomPP, topRev, botRev, shape, maxDepth - 1);
         return leftSubs + rightSubs;
       }
 
@@ -1999,7 +2036,7 @@
        *
        * @returns {number} recommended number of subdivisions (power of 2)
        */
-      function adaptiveBezierSubdivisions(p0, cp1, cp2, p3, srcBounds, topPP, bottomPP, topRev, botRev, maxDepth = 6) {
+      function adaptiveBezierSubdivisions(p0, cp1, cp2, p3, srcBounds, topPP, bottomPP, topRev, botRev, shape, maxDepth = 6) {
         // Sample the actual bezier at t=0.25, 0.5, 0.75
         const bezierAt = (t) => {
           const mt = 1 - t;
@@ -2011,10 +2048,10 @@
 
         // Get true warped positions at test params
         const testTs = [0.25, 0.5, 0.75];
-        const wp0  = warpPoint(p0,  srcBounds, topPP, bottomPP, topRev, botRev);
-        const wcp1 = warpPoint(cp1, srcBounds, topPP, bottomPP, topRev, botRev);
-        const wcp2 = warpPoint(cp2, srcBounds, topPP, bottomPP, topRev, botRev);
-        const wp3  = warpPoint(p3,  srcBounds, topPP, bottomPP, topRev, botRev);
+        const wp0  = warpPoint(p0,  srcBounds, topPP, bottomPP, topRev, botRev, shape);
+        const wcp1 = warpPoint(cp1, srcBounds, topPP, bottomPP, topRev, botRev, shape);
+        const wcp2 = warpPoint(cp2, srcBounds, topPP, bottomPP, topRev, botRev, shape);
+        const wp3  = warpPoint(p3,  srcBounds, topPP, bottomPP, topRev, botRev, shape);
 
         let maxDeviation = 0;
         for (const t of testTs) {
@@ -2026,7 +2063,7 @@
           };
           // Where the point actually should be (warp the true source position)
           const srcPt = bezierAt(t);
-          const truePt = warpPoint(srcPt, srcBounds, topPP, bottomPP, topRev, botRev);
+          const truePt = warpPoint(srcPt, srcBounds, topPP, bottomPP, topRev, botRev, shape);
           const dev = Math.hypot(warpedBezierPt.x - truePt.x, warpedBezierPt.y - truePt.y);
           if (dev > maxDeviation) maxDeviation = dev;
         }
@@ -2048,26 +2085,23 @@
        * @param {object} srcBounds, topPP, bottomPP, topRev, botRev - envelope params
        * @param {number} depth - current recursion depth
        */
-      function warpBezierSegment(resultPath, p0, cp1, cp2, p3, srcBounds, topPP, bottomPP, topRev, botRev, depth) {
-        const subs = adaptiveBezierSubdivisions(p0, cp1, cp2, p3, srcBounds, topPP, bottomPP, topRev, botRev, depth);
+      function warpBezierSegment(resultPath, p0, cp1, cp2, p3, srcBounds, topPP, bottomPP, topRev, botRev, shape, depth) {
+        const subs = adaptiveBezierSubdivisions(p0, cp1, cp2, p3, srcBounds, topPP, bottomPP, topRev, botRev, shape, depth);
         if (subs <= 1 || depth <= 0) {
-          // Warp control points directly and emit a cubic bezier segment
-          const wp0  = warpPoint(p0,  srcBounds, topPP, bottomPP, topRev, botRev);
-          const wcp1 = warpPoint(cp1, srcBounds, topPP, bottomPP, topRev, botRev);
-          const wcp2 = warpPoint(cp2, srcBounds, topPP, bottomPP, topRev, botRev);
-          const wp3  = warpPoint(p3,  srcBounds, topPP, bottomPP, topRev, botRev);
+          const wp0  = warpPoint(p0,  srcBounds, topPP, bottomPP, topRev, botRev, shape);
+          const wcp1 = warpPoint(cp1, srcBounds, topPP, bottomPP, topRev, botRev, shape);
+          const wcp2 = warpPoint(cp2, srcBounds, topPP, bottomPP, topRev, botRev, shape);
+          const wp3  = warpPoint(p3,  srcBounds, topPP, bottomPP, topRev, botRev, shape);
 
-          // Use Paper.js cubicCurveTo
           resultPath.cubicCurveTo(
             new paper.Point(wcp1.x, wcp1.y),
             new paper.Point(wcp2.x, wcp2.y),
             new paper.Point(wp3.x, wp3.y)
           );
         } else {
-          // Subdivide at t=0.5 and recurse
           const [left, right] = subdivideCubic(p0, cp1, cp2, p3, 0.5);
-          warpBezierSegment(resultPath, left[0], left[1], left[2], left[3], srcBounds, topPP, bottomPP, topRev, botRev, depth - 1);
-          warpBezierSegment(resultPath, right[0], right[1], right[2], right[3], srcBounds, topPP, bottomPP, topRev, botRev, depth - 1);
+          warpBezierSegment(resultPath, left[0], left[1], left[2], left[3], srcBounds, topPP, bottomPP, topRev, botRev, shape, depth - 1);
+          warpBezierSegment(resultPath, right[0], right[1], right[2], right[3], srcBounds, topPP, bottomPP, topRev, botRev, shape, depth - 1);
         }
       }
 
@@ -2075,21 +2109,19 @@
        * Warp a straight line segment with adaptive subdivision so it follows
        * the curve of the envelope. Emits cubicCurveTo segments into resultPath.
        */
-      function warpLineSegment(resultPath, p0, p1, srcBounds, topPP, bottomPP, topRev, botRev, depth = 8) {
-        const wp0 = warpPoint(p0, srcBounds, topPP, bottomPP, topRev, botRev);
-        const wp1 = warpPoint(p1, srcBounds, topPP, bottomPP, topRev, botRev);
+      function warpLineSegment(resultPath, p0, p1, srcBounds, topPP, bottomPP, topRev, botRev, shape, depth = 8) {
+        const wp0 = warpPoint(p0, srcBounds, topPP, bottomPP, topRev, botRev, shape);
+        const wp1 = warpPoint(p1, srcBounds, topPP, bottomPP, topRev, botRev, shape);
         const mid = { x: (p0.x + p1.x) / 2, y: (p0.y + p1.y) / 2 };
-        const wMid = warpPoint(mid, srcBounds, topPP, bottomPP, topRev, botRev);
+        const wMid = warpPoint(mid, srcBounds, topPP, bottomPP, topRev, botRev, shape);
         const linearMid = { x: (wp0.x + wp1.x) / 2, y: (wp0.y + wp1.y) / 2 };
         const deviation = Math.hypot(wMid.x - linearMid.x, wMid.y - linearMid.y);
 
-        // Threshold: 0.1 SVG units — improved perfection for vector paths
         if (deviation < 0.1 || depth <= 0) {
-          // Approximate this line sub-segment with a cubic bezier to match curvature better
           const scp1 = { x: p0.x + (p1.x - p0.x) / 3, y: p0.y + (p1.y - p0.y) / 3 };
           const scp2 = { x: p0.x + (p1.x - p0.x) * 2 / 3, y: p0.y + (p1.y - p0.y) * 2 / 3 };
-          const wcp1 = warpPoint(scp1, srcBounds, topPP, bottomPP, topRev, botRev);
-          const wcp2 = warpPoint(scp2, srcBounds, topPP, bottomPP, topRev, botRev);
+          const wcp1 = warpPoint(scp1, srcBounds, topPP, bottomPP, topRev, botRev, shape);
+          const wcp2 = warpPoint(scp2, srcBounds, topPP, bottomPP, topRev, botRev, shape);
           
           resultPath.cubicCurveTo(
             new paper.Point(wcp1.x, wcp1.y),
@@ -2097,8 +2129,8 @@
             new paper.Point(wp1.x,  wp1.y)
           );
         } else {
-          warpLineSegment(resultPath, p0, mid, srcBounds, topPP, bottomPP, topRev, botRev, depth - 1);
-          warpLineSegment(resultPath, mid, p1, srcBounds, topPP, bottomPP, topRev, botRev, depth - 1);
+          warpLineSegment(resultPath, p0, mid, srcBounds, topPP, bottomPP, topRev, botRev, shape, depth - 1);
+          warpLineSegment(resultPath, mid, p1, srcBounds, topPP, bottomPP, topRev, botRev, shape, depth - 1);
         }
       }
 
@@ -2109,18 +2141,16 @@
        * @param {paper.Path} singlePath - a simple Paper.js path
        * @returns {string|null} new SVG 'd' attribute string
        */
-      function warpSinglePaperPath(singlePath, srcBounds, topPP, bottomPP, topRev, botRev) {
+      function warpSinglePaperPath(singlePath, srcBounds, topPP, bottomPP, topRev, botRev, shape) {
         if (!singlePath || !singlePath.segments || singlePath.segments.length < 1) return null;
 
         const segs = singlePath.segments;
         const resultPath = new paper.Path();
 
-        // MOVE TO: warp the first anchor point
         const firstPt = { x: segs[0].point.x, y: segs[0].point.y };
-        const wFirst = warpPoint(firstPt, srcBounds, topPP, bottomPP, topRev, botRev);
+        const wFirst = warpPoint(firstPt, srcBounds, topPP, bottomPP, topRev, botRev, shape);
         resultPath.moveTo(new paper.Point(wFirst.x, wFirst.y));
 
-        // Process each segment pair
         const segCount = singlePath.closed ? segs.length : segs.length - 1;
         for (let i = 0; i < segCount; i++) {
           const seg0 = segs[i];
@@ -2129,7 +2159,6 @@
           const p0 = { x: seg0.point.x, y: seg0.point.y };
           const p3 = { x: seg1.point.x, y: seg1.point.y };
 
-          // Paper.js stores handles as offsets from the anchor point
           const handleOut = seg0.handleOut;
           const handleIn  = seg1.handleIn;
 
@@ -2137,13 +2166,11 @@
                               handleIn.x  !== 0 || handleIn.y  !== 0);
 
           if (hasHandles) {
-            // This is a cubic bezier segment
             const cp1 = { x: p0.x + handleOut.x, y: p0.y + handleOut.y };
             const cp2 = { x: p3.x + handleIn.x,  y: p3.y + handleIn.y  };
-            warpBezierSegment(resultPath, p0, cp1, cp2, p3, srcBounds, topPP, bottomPP, topRev, botRev, 6);
+            warpBezierSegment(resultPath, p0, cp1, cp2, p3, srcBounds, topPP, bottomPP, topRev, botRev, shape, 6);
           } else {
-            // Straight line — needs adaptive subdivision for curved envelopes
-            warpLineSegment(resultPath, p0, p3, srcBounds, topPP, bottomPP, topRev, botRev);
+            warpLineSegment(resultPath, p0, p3, srcBounds, topPP, bottomPP, topRev, botRev, shape);
           }
         }
 
@@ -2171,22 +2198,20 @@
        * naively-warped control points deviate too much from the true
        * warped curve, keeping output compact while staying accurate.
        */
-      function warpPaperPath(paperPath, srcBounds, topPP, bottomPP, topRev, botRev, precision, smoothFactor) {
+      function warpPaperPath(paperPath, srcBounds, topPP, bottomPP, topRev, botRev, precision, smoothFactor, shape) {
         if (!paperPath) return null;
 
-        // Handle CompoundPath (multiple sub-paths from a single 'd' attribute)
         if (paperPath.className === 'CompoundPath') {
           const subDs = [];
           for (const child of paperPath.children) {
-            const subD = warpSinglePaperPath(child, srcBounds, topPP, bottomPP, topRev, botRev);
+            const subD = warpSinglePaperPath(child, srcBounds, topPP, bottomPP, topRev, botRev, shape);
             if (subD) subDs.push(subD);
           }
           return subDs.length > 0 ? subDs.join(' ') : null;
         }
 
-        // Simple Path
         if (!paperPath.length || !paperPath.segments || paperPath.segments.length < 1) return null;
-        return warpSinglePaperPath(paperPath, srcBounds, topPP, bottomPP, topRev, botRev);
+        return warpSinglePaperPath(paperPath, srcBounds, topPP, bottomPP, topRev, botRev, shape);
       }
 
       /** Tags whose children we skip entirely during warp */
@@ -2366,10 +2391,16 @@
               pp.transform(new paper.Matrix(cumM[0],cumM[1],cumM[2],cumM[3],cumM[4],cumM[5]));
               const svgEl = pp.exportSVG({ asString: false });
               const newD = svgEl.getAttribute("d");
+              const isOpen = !pp.closed;
               pp.remove();
               if (newD) {
                 const pathEl = node.ownerDocument.createElementNS(ns, "path");
                 copyAttrs(node, pathEl, [...(SHAPE_SKIP_ATTRS[tag]||[]), "transform"]);
+                
+                if (isOpen && !node.hasAttribute("fill") && !node.style.fill) {
+                  pathEl.setAttribute("fill", "none");
+                }
+                
                 pathEl.setAttribute("d", newD);
                 node.parentNode.replaceChild(pathEl, node);
               }
@@ -2434,16 +2465,16 @@
       // WARP NODE — applies envelope distortion to flattened SVG elements
       // ═══════════════════════════════════════════════════════════════════
 
-      function warpImageEl(el, doc, ns, srcBounds, topPP, bottomPP, topRev, botRev) {
+      function warpImageEl(el, doc, ns, srcBounds, topPP, bottomPP, topRev, botRev, shape) {
         const x = parseFloat(el.getAttribute("x") || "0");
         const y = parseFloat(el.getAttribute("y") || "0");
         const w = parseFloat(el.getAttribute("width")  || "0");
         const h = parseFloat(el.getAttribute("height") || "0");
         const corners = [
-          envelopeTransformForShape(x,   y,   srcBounds, topPP, bottomPP, topRev, botRev),
-          envelopeTransformForShape(x+w, y,   srcBounds, topPP, bottomPP, topRev, botRev),
-          envelopeTransformForShape(x+w, y+h, srcBounds, topPP, bottomPP, topRev, botRev),
-          envelopeTransformForShape(x,   y+h, srcBounds, topPP, bottomPP, topRev, botRev),
+          envelopeTransformForShape(x,   y,   srcBounds, topPP, bottomPP, topRev, botRev, shape),
+          envelopeTransformForShape(x+w, y,   srcBounds, topPP, bottomPP, topRev, botRev, shape),
+          envelopeTransformForShape(x+w, y+h, srcBounds, topPP, bottomPP, topRev, botRev, shape),
+          envelopeTransformForShape(x,   y+h, srcBounds, topPP, bottomPP, topRev, botRev, shape),
         ];
         const xs = corners.map(c => c.x), ys = corners.map(c => c.y);
         const minX = Math.min(...xs), maxX = Math.max(...xs);
@@ -2475,7 +2506,7 @@
         }
       }
 
-      function warpNode(node, doc, ns, srcBounds, topPP, bottomPP, topRev, botRev, precision, smoothing) {
+      function warpNode(node, doc, ns, srcBounds, topPP, bottomPP, topRev, botRev, precision, smoothing, shape) {
         if (!node || node.nodeType !== 1) return;
         const tag = (node.tagName || "").toLowerCase();
         if (WARP_SKIP_TAGS.has(tag)) return;
@@ -2487,7 +2518,16 @@
             try {
               const pp = makePaperPath(d);
               if (pp) {
-                const newD = warpPaperPath(pp, srcBounds, topPP, bottomPP, topRev, botRev, precision, smoothing);
+                const newD = warpPaperPath(pp, srcBounds, topPP, bottomPP, topRev, botRev, precision, smoothing, shape);
+                
+                // Prevent open paths/lines from rendering with default black fill when bent
+                const isOpen = pp.className === 'CompoundPath' 
+                    ? pp.children.some(c => !c.closed) 
+                    : !pp.closed;
+                if (isOpen && !node.hasAttribute("fill") && !node.style.fill) {
+                  node.setAttribute("fill", "none");
+                }
+
                 pp.remove();
                 if (newD) node.setAttribute("d", newD);
               }
@@ -2523,11 +2563,18 @@
               }
             }
             if (pp) {
-              const newD = warpPaperPath(pp, srcBounds, topPP, bottomPP, topRev, botRev, precision, smoothing);
+              const newD = warpPaperPath(pp, srcBounds, topPP, bottomPP, topRev, botRev, precision, smoothing, shape);
+              
+              const isOpen = !pp.closed;
               pp.remove();
               if (newD) {
                 const pathEl = doc.createElementNS(ns, "path");
                 copyAttrs(node, pathEl, SHAPE_SKIP_ATTRS[tag]||[]);
+                
+                if (isOpen && !node.hasAttribute("fill") && !node.style.fill) {
+                  pathEl.setAttribute("fill", "none");
+                }
+                
                 pathEl.setAttribute("d", newD);
                 node.parentNode.replaceChild(pathEl, node);
               }
@@ -2538,7 +2585,7 @@
 
         // ── IMAGE ──────────────────────────────────────────────────────────
         if (tag === "image") {
-          warpImageEl(node, doc, ns, srcBounds, topPP, bottomPP, topRev, botRev);
+          warpImageEl(node, doc, ns, srcBounds, topPP, bottomPP, topRev, botRev, shape);
           return;
         }
 
@@ -2548,13 +2595,13 @@
             const wp = envelopeTransformForShape(
               parseFloat(node.getAttribute("x") || "0"),
               parseFloat(node.getAttribute("y") || "0"),
-              srcBounds, topPP, bottomPP, topRev, botRev
+              srcBounds, topPP, bottomPP, topRev, botRev, shape
             );
             if (node.hasAttribute("x")) node.setAttribute("x", warpF(wp.x));
             if (node.hasAttribute("y")) node.setAttribute("y", warpF(wp.y));
           }
           Array.from(node.children).forEach(c =>
-            warpNode(c, doc, ns, srcBounds, topPP, bottomPP, topRev, botRev, precision, smoothing)
+            warpNode(c, doc, ns, srcBounds, topPP, bottomPP, topRev, botRev, precision, smoothing, shape)
           );
           return;
         }
@@ -2564,7 +2611,7 @@
           const wp = envelopeTransformForShape(
             parseFloat(node.getAttribute("x") || "0"),
             parseFloat(node.getAttribute("y") || "0"),
-            srcBounds, topPP, bottomPP, topRev, botRev
+            srcBounds, topPP, bottomPP, topRev, botRev, shape
           );
           node.setAttribute("x", warpF(wp.x));
           node.setAttribute("y", warpF(wp.y));
@@ -2574,14 +2621,14 @@
         // ── GROUPS / CONTAINERS (transforms already flattened) ─────────────
         if (tag === "g" || tag === "a" || tag === "svg") {
           Array.from(node.children).forEach(c =>
-            warpNode(c, doc, ns, srcBounds, topPP, bottomPP, topRev, botRev, precision, smoothing)
+            warpNode(c, doc, ns, srcBounds, topPP, bottomPP, topRev, botRev, precision, smoothing, shape)
           );
           return;
         }
 
         // ── FALLBACK ───────────────────────────────────────────────────────
         Array.from(node.children).forEach(c =>
-          warpNode(c, doc, ns, srcBounds, topPP, bottomPP, topRev, botRev, precision, smoothing)
+          warpNode(c, doc, ns, srcBounds, topPP, bottomPP, topRev, botRev, precision, smoothing, shape)
         );
       }
 
@@ -2662,6 +2709,29 @@
             return null;
           }
 
+          const isFlatShape = shape.type === "rectangle" || shape.view === "top" || shape.type === "sweet_box_te";
+
+          if (isFlatShape) {
+            // ── SIMPLE RECTANGULAR MAPPING ─────────────────────────
+            // No mathematical warping required. The shape is flat!
+            // We preserve 100% of the layers natively by just resizing the root SVG.
+            
+            if (!root.hasAttribute("viewBox")) {
+              root.setAttribute("viewBox", `${srcBounds.x} ${srcBounds.y} ${srcBounds.width} ${srcBounds.height}`);
+            }
+            
+            root.setAttribute("width", shape.width);
+            root.setAttribute("height", shape.height);
+            root.setAttribute("preserveAspectRatio", "xMidYMid meet");
+            
+            // Clean up Paper.js context
+            topPP.remove();
+            bottomPP.remove();
+            paper.project.clear();
+            
+            return new XMLSerializer().serializeToString(doc);
+          }
+
           // ══════════════════════════════════════════════════════════════════
           // PHASE 1: FLATTEN ALL TRANSFORMS
           // Resolve every group/element transform into absolute coordinates
@@ -2686,30 +2756,20 @@
             root.insertBefore(defs, root.firstChild);
           }
 
-          // ── Add shape clip-path ──────────────────────────────────────────
-          const clipId   = "envelopeClip_" + Date.now();
-          const clipEl   = doc.createElementNS(ns, "clipPath");
-          clipEl.setAttribute("id", clipId);
-          const clipPath = doc.createElementNS(ns, "path");
-          clipPath.setAttribute("d", shape.path);
-          clipEl.appendChild(clipPath);
-          defs.appendChild(clipEl);
-
-          // ── Wrap all non-defs content in a clipped group ─────────────────
+          // ── Apply shape clip-path directly to original top-level children ───────────
+          // We DO NOT wrap them in a master <g> to ensure Illustrator root layers are preserved.
+          // Also, NO root clip-path is applied because mathematically warped vector paths
+          // stay within bounds, and raster images are clipped individually. This prevents
+          // AI from converting native Layers into Clip Groups.
           const drawKids = Array.from(root.children).filter(el => el.tagName.toLowerCase() !== "defs");
-          const wrapper  = doc.createElementNS(ns, "g");
-          wrapper.setAttribute("clip-path", `url(#${clipId})`);
-          wrapper.setAttribute("id", "envelopeWarp");
-          drawKids.forEach(k => { root.removeChild(k); wrapper.appendChild(k); });
-          root.appendChild(wrapper);
 
           // ══════════════════════════════════════════════════════════════════
           // PHASE 2: ENVELOPE WARP
           // Transform all flattened coordinates through the shape envelope.
           // ══════════════════════════════════════════════════════════════════
-          Array.from(wrapper.children).forEach(child =>
+          drawKids.forEach(child =>
             warpNode(child, doc, ns, srcBounds, topPP, bottomPP,
-                     shape.topIsReversed, shape.bottomIsReversed, 2, 0.5)
+                     shape.topIsReversed, shape.bottomIsReversed, 2, 0.5, shape)
           );
 
           // Cleanup Paper.js paths
@@ -2739,8 +2799,13 @@
 
         // ── VECTOR PATH: source was an SVG file ──────────────────────────
         if (currentImage && currentSVGRawText) {
-          const warped = buildWarpedSVG(currentSVGRawText, shape);
-          if (warped) return warped;
+          let warped = buildWarpedSVG(currentSVGRawText, shape);
+          if (warped) {
+            if (!warped.trim().startsWith("<?xml")) {
+               warped = `<?xml version="1.0" encoding="UTF-8"?>\n` + warped;
+            }
+            return warped;
+          }
           // Paper.js unavailable or failed → fall through to raster
         }
 

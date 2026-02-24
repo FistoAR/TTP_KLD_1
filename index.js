@@ -1237,7 +1237,14 @@
         localCtx.save();
         localCtx.transform(transformMatrix.a, transformMatrix.b, transformMatrix.c, transformMatrix.d, transformMatrix.e, transformMatrix.f);
         if (!isExport) {
-          localCtx.strokeStyle = "#ed312c";
+            const typeColors = {
+              round: "#ed312c",        // Red
+              round_square: "#3b82f6", // Blue
+              rectangle: "#10b981",    // Green
+              sweet_box: "#8b5cf6",    // Purple
+              sweet_box_te: "#f59e0b"  // Orange
+          };
+          localCtx.strokeStyle = typeColors[currentShapeType] || "#ed312c";
           localCtx.lineWidth = 2 / finalScale;
           localCtx.stroke(path);
         }
@@ -1878,6 +1885,18 @@
        * Returns a paper.Path or paper.CompoundPath, or null on failure.
        */
       function makePaperPath(d) {
+        if (!d) return null;
+        try {
+          // If the path contains multiple Move-To commands, it's a compound path.
+          // Paper.js `new paper.Path(d)` will drop the extra sub-paths.
+          const mCount = (d.match(/[Mm]/g) || []).length;
+          if (mCount > 1) {
+            const cp = new paper.CompoundPath(d);
+            if (cp.children && cp.children.length > 0) return cp;
+            cp.remove();
+          }
+        } catch(e) { /* fall through */ }
+
         try {
           // Paper.js Path constructor handles simple paths
           const p = new paper.Path(d);
@@ -1928,7 +1947,8 @@
           let edgeExt = 0;
           let viewExt = 0; // vertical extension
           
-          if (isSweetBox) { edgeExt = 0.03; viewExt = 40; }
+          // DO NOT apply edgeExt and viewExt scaling for sweet_box during SVG warp
+          // if (isSweetBox) { edgeExt = 0.03; viewExt = 40; }
           // if (isWideShape) { viewExt = 22; }
           // if (shape.type === "round" && !shape.name.includes("250ml")) { viewExt = 10; }
 
@@ -2714,15 +2734,50 @@
           if (isFlatShape) {
             // ── SIMPLE RECTANGULAR MAPPING ─────────────────────────
             // No mathematical warping required. The shape is flat!
-            // We preserve 100% of the layers natively by just resizing the root SVG.
+            // We scale it natively via a master group so the artboard is exactly shape.width x shape.height
+
+            const sx = shape.width / srcBounds.width;
+            const sy = shape.height / srcBounds.height;
             
-            if (!root.hasAttribute("viewBox")) {
-              root.setAttribute("viewBox", `${srcBounds.x} ${srcBounds.y} ${srcBounds.width} ${srcBounds.height}`);
+            const drawContent = Array.from(root.children).filter(el =>
+              el.tagName && el.tagName.toLowerCase() !== "defs"
+            );
+            
+            const g = doc.createElementNS(ns, "g");
+            g.setAttribute("transform", `scale(${sx}, ${sy}) translate(${-srcBounds.x}, ${-srcBounds.y})`);
+            
+            for (const child of drawContent) {
+              g.appendChild(child);
             }
+            root.appendChild(g);
             
-            root.setAttribute("width", shape.width);
-            root.setAttribute("height", shape.height);
-            root.setAttribute("preserveAspectRatio", "xMidYMid meet");
+            // Apply clip-path to strictly trim the flat shape bounds too
+            let defs = root.querySelector("defs");
+            if (!defs) {
+              defs = doc.createElementNS(ns, "defs");
+              root.insertBefore(defs, root.firstChild);
+            }
+            const clipId = `shape-trim-flat-${Date.now()}`;
+            const clipPathEl = doc.createElementNS(ns, "clipPath");
+            clipPathEl.setAttribute("id", clipId);
+            const clipPathPath = doc.createElementNS(ns, "path");
+            clipPathPath.setAttribute("d", shape.path);
+            clipPathEl.appendChild(clipPathPath);
+            defs.appendChild(clipPathEl);
+            
+            const outerG = doc.createElementNS(ns, "g");
+            outerG.setAttribute("clip-path", `url(#${clipId})`);
+            outerG.appendChild(g); // G contains the flattened shapes
+            
+            const exportGroup = doc.createElementNS(ns, "g");
+            exportGroup.setAttribute("id", "Artwork_Group");
+            exportGroup.appendChild(outerG);
+            root.appendChild(exportGroup);
+
+            root.setAttribute("viewBox", `0 0 ${shape.width} ${shape.height}`);
+            root.removeAttribute("width");
+            root.removeAttribute("height");
+            root.removeAttribute("style");
             
             // Clean up Paper.js context
             topPP.remove();
@@ -2746,8 +2801,9 @@
 
           // ── Rewire output viewBox to match shape bounds ──────────────────
           root.setAttribute("viewBox", `0 0 ${shape.width} ${shape.height}`);
-          root.setAttribute("width",   shape.width);
-          root.setAttribute("height",  shape.height);
+          root.removeAttribute("width");
+          root.removeAttribute("height");
+          root.removeAttribute("style");
 
           // ── Ensure <defs> exists ─────────────────────────────────────────
           let defs = root.querySelector("defs");
@@ -2756,12 +2812,25 @@
             root.insertBefore(defs, root.firstChild);
           }
 
-          // ── Apply shape clip-path directly to original top-level children ───────────
-          // We DO NOT wrap them in a master <g> to ensure Illustrator root layers are preserved.
-          // Also, NO root clip-path is applied because mathematically warped vector paths
-          // stay within bounds, and raster images are clipped individually. This prevents
-          // AI from converting native Layers into Clip Groups.
+          const clipId = `shape-trim-${Date.now()}`;
+          const clipPathEl = doc.createElementNS(ns, "clipPath");
+          clipPathEl.setAttribute("id", clipId);
+          const clipPathPath = doc.createElementNS(ns, "path");
+          clipPathPath.setAttribute("d", shape.path);
+          clipPathEl.appendChild(clipPathPath);
+          defs.appendChild(clipPathEl);
+
+          // ── Apply shape clip-path by wrapping all paths in a master Group ───────────
           const drawKids = Array.from(root.children).filter(el => el.tagName.toLowerCase() !== "defs");
+          
+          const clipGroup = doc.createElementNS(ns, "g");
+          clipGroup.setAttribute("clip-path", `url(#${clipId})`);
+          clipGroup.setAttribute("id", "Layer_1");
+          
+          for (const kid of drawKids) {
+            clipGroup.appendChild(kid);
+          }
+          root.appendChild(clipGroup);
 
           // ══════════════════════════════════════════════════════════════════
           // PHASE 2: ENVELOPE WARP
@@ -2784,6 +2853,16 @@
           outlineEl.setAttribute("stroke", "none");
           outlineEl.setAttribute("id", "envelopeOutline");
           root.appendChild(outlineEl);
+
+          // ── Package all elements into a single group for export ──────────
+          const exportGroup = doc.createElementNS(ns, "g");
+          exportGroup.setAttribute("id", "Artwork_Group");
+          Array.from(root.children).forEach(child => {
+            if (child.tagName.toLowerCase() !== "defs") {
+              exportGroup.appendChild(child);
+            }
+          });
+          root.appendChild(exportGroup);
 
           return new XMLSerializer().serializeToString(doc);
 
@@ -2811,6 +2890,7 @@
 
         // ── RASTER FALLBACK ───────────────────────────────────────────────
         let svgContent = "";
+        const clipDefs = `<defs>\n  <clipPath id="shapeClip">\n    <path d="${shape.path}" />\n  </clipPath>\n</defs>\n`;
         if (currentImage) {
           const exportWidth = shape.width * EXPORT_SCALE;
           const exportHeight = shape.height * EXPORT_SCALE;
@@ -2823,14 +2903,14 @@
           exportCtx.imageSmoothingQuality = "high";
           renderImageContent(exportCtx, exportWidth, exportHeight, true, EXPORT_SCALE, true, false);
           const rasterData = exportCanvas.toDataURL("image/png");
-          svgContent = `<image x="0" y="0" width="${shape.width}" height="${shape.height}" xlink:href="${rasterData}" preserveAspectRatio="none" image-rendering="auto"
-    shape-rendering="geometricPrecision"/>`;
+          svgContent = `${clipDefs}<image x="0" y="0" width="${shape.width}" height="${shape.height}" xlink:href="${rasterData}" preserveAspectRatio="none" image-rendering="auto"
+    shape-rendering="geometricPrecision" clip-path="url(#shapeClip)"/>`;
           svgContent += `\n<!-- CMYK-VECTORS-HINT: fill=${hexToCmykPercentString("#eeeeee")} (vectors only) -->`;
         } else {
-          svgContent = `<path d="${shape.path}" fill="#eeeeee" data-cmyk-fill="${hexToCmykPercentString("#eeeeee")}" />`;
+          svgContent = `${clipDefs}<path d="${shape.path}" fill="#eeeeee" data-cmyk-fill="${hexToCmykPercentString("#eeeeee")}" clip-path="url(#shapeClip)"/>`;
         }
 
-        return `<?xml version="1.0" encoding="UTF-8"?>\n<svg version="1.1" id="Layer_1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 ${shape.width} ${shape.height}" xml:space="preserve">\n${svgContent}\n</svg>`;
+        return `<?xml version="1.0" encoding="UTF-8"?>\n<svg version="1.1" id="Layer_1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 ${shape.width} ${shape.height}" xml:space="preserve">\n<g id="Artwork_Group">\n${svgContent}\n</g>\n</svg>`;
       }
 
       async function exportSVG() {

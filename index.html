@@ -82,26 +82,26 @@
       </div>
       
       <!-- Zoom Controls with vw/vh positioning -->
-      <div class="zoom-controls absolute bottom-[2vh] left-[2vw] flex flex-col gap-[0.5vh] z-40 max-[480px]:bottom-3 max-[480px]:left-3">
+      <div class="zoom-controls absolute bottom-[2vh] left-[2vw] flex flex-col gap-[0.5vh] z-40">
         <div class="zoom-btn-group flex justify-between bg-white rounded-md shadow-[0_2px_8px_rgba(0,0,0,0.15)] overflow-hidden border border-slate-200">
-          <button id="zoomInBtn" class="zoom-btn w-[2.2vw] h-[2.2vw] bg-white border-0 cursor-pointer flex items-center justify-center transition-all text-slate-600 hover:bg-slate-50 hover:text-blue-500 active:bg-slate-200 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-white disabled:hover:text-slate-600 max-[480px]:w-8 max-[480px]:h-8" title="Zoom In (Ctrl++)">
-            <svg class="w-[0.9vw] h-[0.9vw] fill-current max-[480px]:w-4 max-[480px]:h-4" viewBox="0 0 24 24"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
+          <button id="zoomInBtn" class="zoom-btn w-[100%] h-[2.2vw] bg-white border-0 cursor-pointer flex items-center justify-center transition-all text-slate-600 hover:bg-slate-50 hover:text-blue-500 active:bg-slate-200 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-white disabled:hover:text-slate-600" title="Zoom In (Ctrl++)">
+            <svg class="w-[0.9vw] h-[0.9vw] fill-current" viewBox="0 0 24 24"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
           </button>
-          <div class="zoom-divider w-px bg-slate-200"></div>
-          <button id="zoomOutBtn" class="zoom-btn w-[2.2vw] h-[2.2vw] bg-white border-0 cursor-pointer flex items-center justify-center transition-all text-slate-600 hover:bg-slate-50 hover:text-blue-500 active:bg-slate-200 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-white disabled:hover:text-slate-600 max-[480px]:w-8 max-[480px]:h-8" title="Zoom Out (Ctrl+-)">
-            <svg class="w-[0.9vw] h-[0.9vw] fill-current max-[480px]:w-4 max-[480px]:h-4" viewBox="0 0 24 24"><path d="M19 13H5v-2h14v2z"/></svg>
+          <div class="zoom-divider w-[1px] bg-slate-200 shrink-0"></div>
+          <button id="zoomOutBtn" class="zoom-btn w-[100%] h-[2.2vw] bg-white border-0 cursor-pointer flex items-center justify-center transition-all text-slate-600 hover:bg-slate-50 hover:text-blue-500 active:bg-slate-200 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-white disabled:hover:text-slate-600" title="Zoom Out (Ctrl+-)">
+            <svg class="w-[0.9vw] h-[0.9vw] fill-current" viewBox="0 0 24 24"><path d="M19 13H5v-2h14v2z"/></svg>
           </button>
         </div>
-        <div id="zoomDisplay" class="zoom-display bg-white rounded-md shadow-[0_2px_8px_rgba(0,0,0,0.15)] px-[0.7vw] py-[0.3vh] text-[0.7vw] font-semibold text-slate-600 text-center min-w-[3.8vw] border border-slate-200 cursor-pointer transition-all hover:bg-slate-50 hover:text-blue-500 max-[480px]:px-2.5 max-[480px]:py-1.5 max-[480px]:min-w-[50px] max-[480px]:text-[11px]" title="Click to reset zoom">100%</div>
+        <div id="zoomDisplay" class="zoom-display bg-white rounded-md shadow-[0_2px_8px_rgba(0,0,0,0.15)] px-[0.7vw] h-[2.2vw] flex items-center justify-center text-[0.7vw] font-semibold text-slate-600 text-center border border-slate-200 cursor-pointer transition-all hover:bg-slate-50 hover:text-blue-500" title="Click to reset zoom">100%</div>
         
         <!-- Pan indicator -->
-        <div id="panIndicator" class="pan-indicator bg-white rounded-md shadow-[0_2px_8px_rgba(0,0,0,0.15)] px-[0.6vw] py-[0.3vh] text-[0.6vw] font-medium text-slate-500 text-center border border-slate-200 flex items-center gap-[0.3vw] opacity-0 transition-opacity duration-200 [&.visible]:opacity-100 [&.active]:bg-blue-500 [&.active]:text-white [&.active]:border-blue-500 max-[480px]:p-1.5 max-[480px]:text-[10px]">
+        <div id="panIndicator" class="pan-indicator bg-white rounded-md shadow-[0_2px_8px_rgba(0,0,0,0.15)] px-[0.6vw] h-[2.2vw] text-[0.6vw] font-medium text-slate-500 text-center border border-slate-200 flex items-center justify-center gap-[0.3vw] opacity-0 transition-opacity duration-200 [&.visible]:opacity-100 [&.active]:bg-blue-500 [&.active]:text-white [&.active]:border-blue-500">
           <svg class="w-[0.8vw] h-[0.8vw] fill-current" viewBox="0 0 24 24"><path d="M10 9h4V6h3l-5-5-5 5h3v3zm-1 1H6V7l-5 5 5 5v-3h3v-4zm14 2l-5-5v3h-3v4h3v3l5-5zm-9 3h-4v3H7l5 5 5-5h-3v-3z"/></svg>
-          <span id="panIndicatorText">Hold Space + Drag</span>
+          <span id="panIndicatorText" class="w-[5.2vw] inline-block whitespace-nowrap text-center">Hold Space + Drag</span>
         </div>
         
         <!-- Reset pan button -->
-        <button id="resetPanBtn" class="reset-pan-btn bg-white rounded-md shadow-[0_2px_8px_rgba(0,0,0,0.15)] px-[0.6vw] py-[0.3vh] text-[0.6vw] font-medium text-slate-600 text-center border border-slate-200 cursor-pointer hidden items-center gap-[0.3vw] transition-all hover:bg-slate-50 hover:text-blue-500 [&.visible]:flex max-[480px]:p-1.5 max-[480px]:text-[10px]" title="Reset pan position">
+        <button id="resetPanBtn" class="reset-pan-btn bg-white rounded-md shadow-[0_2px_8px_rgba(0,0,0,0.15)] px-[0.6vw] h-[2.2vw] text-[0.6vw] font-medium text-slate-600 text-center border border-slate-200 cursor-pointer hidden items-center justify-center gap-[0.3vw] transition-all hover:bg-slate-50 hover:text-blue-500 [&.visible]:flex" title="Reset pan position">
           <svg class="w-[0.8vw] h-[0.8vw] fill-current" viewBox="0 0 24 24"><path d="M12 5V1L7 6l5 5V7c3.31 0 6 2.69 6 6s-2.69 6-6 6-6-2.69-6-6H4c0 4.42 3.58 8 8 8s8-3.58 8-8-3.58-8-8-8z"/></svg>
           <span>Reset View</span>
         </button>

@@ -429,14 +429,12 @@
           type: "round",
           view: "bottom",
           name: "500ml Round",
-          width: 945.18,
-          height: 430.84,
+          width: 897,
+          height: 276,
           uploadDimensions: { width: 2890, height: 886 },
-          path: "M846.13,387.86c-120.06-43.77-245.71-65.96-373.55-65.96s-252.55,22.02-372.2,65.47l-.61-1.56L24.95,193.11l2.66-.97c143.01-52.15,292.69-78.58,444.97-78.58s301.97,26.44,444.98,78.59l2.65,1.01-74.09,194.71Z",
-          topPath:
-            "M27.61,192.14c143.01-52.15,292.69-78.58,444.97-78.58s301.97,26.44,444.98,78.59",
-          bottomPath:
-            "M846.13,387.86c-120.06-43.77-245.71-65.96-373.55-65.96s-252.55,22.02-372.2,65.47",
+          path: "M821.83 274.8C581.023 187.032 317 186.862 76.0804 274.32L0.650391 80.0499C284.683 -26.7291 612.139 -27.0514 895.96 80.0499L821.83 274.8Z",
+          topPath: "M0.650391 80.0499C284.683 -26.7291 612.139 -27.0514 895.96 80.0499",
+          bottomPath: "M821.83 274.8C581.023 187.032 317 186.862 76.0804 274.32",
           topIsReversed: false,
           bottomIsReversed: true,
           modelPath: "./assets/models/500ml_round_container_t.glb",
@@ -574,14 +572,12 @@
           type: "sweet_box",
           view: "bottom",
           name: "250g Sweet Box",
-          width: 1342.58,
-          height: 189.54,
+          width: 1339,
+          height: 189,
           uploadDimensions: { width: 5533, height: 404 },
-          path: "M662.63.55l-278.9,13.66c-.26,0-.48.03-.74.09L8.88,81.16l-8.31,1.59,1.42,8.27,15.85,89.69,1.64,8.25,8.26-1.36,367.77-65.74c1.19-.23,2.41-.37,3.6-.43l259.43-12.7c1.3-.06,2.64-.03,3.94.09h.11l365.58,24.6c1.84.14,3.69.45,5.44.93.14.03.26.06.37.09l266.12,52.89,7.12,1.34,2.57-6.92,29.28-86.34,2.87-8.88-9.25-2.2-289.39-57.68c-2.38-.62-4.82-1.02-7.28-1.19L668.08.66c-1.16-.11-2.33-.16-3.49-.16-.65,0-1.3.02-1.95.05",
-          topPath:
-            "M8.88,81.16 L382.99,14.3 c.26-.06 .48-.09 .74-.09 L662.63,0.55 c.65-.03 1.3-.05 1.95-.05 c1.16,0 2.33.05 3.49.16 L1042.28,24.34 c2.46.17 4.9.57 7.28,1.19 l289.39,57.68",
-          bottomPath:
-            "M27.74, 187.6 l367.77-65.74 c1.19-.23,2.41-.37,3.6-.43 l259.43-12.7 c1.3-.06,2.64-.03,3.94.09 h.11 l365.58,24.6 c1.84.14,3.69.45,5.44.93 .14.03 .26.06 .37.09 l266.12,52.89",
+          path: "M661.272 0.537167L382.372 14.1972C382.112 14.1972 381.892 14.2272 381.632 14.2872L7.52186 81.1472C2.90186 81.9672 -0.188138 86.3872 0.631861 91.0172L16.4819 180.707C17.3019 185.327 21.7219 188.417 26.3719 187.597L394.142 121.857C395.332 121.627 396.552 121.487 397.742 121.427L657.172 108.727C658.472 108.667 659.812 108.697 661.112 108.817H661.222L1026.8 133.417C1028.64 133.557 1030.49 133.867 1032.24 134.347C1032.38 134.377 1032.5 134.407 1032.61 134.437L1298.73 187.327C1302.9 188.177 1307.06 185.767 1308.42 181.747L1337.7 95.4072C1339.33 90.6212 1336.28 85.3266 1331.32 84.3272L1041.93 26.6472C1039.55 26.0272 1037.11 25.6272 1034.65 25.4572L666.712 0.657193C664.902 0.485555 663.082 0.463639 661.272 0.547177",
+          topPath: "M7.52186 81.1472 L 381.632 14.2872 C 381.892 14.2272 382.112 14.1972 382.372 14.1972 L 661.272 0.547177 C 663.082 0.463639 664.902 0.485555 666.712 0.657193 L 1034.65 25.4572 C 1037.11 25.6272 1039.55 26.0272 1041.93 26.6472 L 1331.32 84.3272",
+          bottomPath: "M26.3719 187.597 L 394.142 121.857 C 395.332 121.627 396.552 121.487 397.742 121.427 L 657.172 108.727 C 658.472 108.667 659.812 108.697 661.112 108.817 H 661.222 L 1026.8 133.417 C 1028.64 133.557 1030.49 133.867 1032.24 134.347 C 1032.38 134.377 1032.5 134.407 1032.61 134.437 L 1298.73 187.327",
           topIsReversed: false,
           bottomIsReversed: false,
           modelPath: "./assets/models/250gms_sweet_t.glb",
@@ -591,16 +587,14 @@
           type: "sweet_box",
           view: "bottom",
           name: "500g Sweet Box",
-          width: 1798.7,
-          height: 215.31,
+          width: 1802.1,
+          height: 216.39,
           uploadDimensions: { width: 7446, height: 403 },
-          path: "M1758.59,213.74l-356.09-70.07c-3.32-.65-6.69-1.11-10.09-1.33l-505.42-33.33c-2.98-.2-5.98-.23-8.96-.09l-341.4,15.99c-3.4.14-6.8.54-10.15,1.13L31.24,213.68l-4.25.74c-3.77.65-7.4-1.84-8.14-5.64L.63,115.74c-.37-1.87.06-3.83,1.13-5.41,1.1-1.59,2.78-2.64,4.68-2.92l4.14-.68L503.67,19.45c3.83-.68,7.68-1.1,11.57-1.3L890,.6c3.4-.17,6.83-.11,10.23.11l495.47,32.68c3.85.25,7.71.76,11.54,1.5l381.26,75.03,4.05.85c1.96.4,3.63,1.59,4.65,3.29,1.02,1.73,1.28,3.77.71,5.67l-26.79,90c-1.05,3.54-4.68,5.7-8.28,4.9l-4.25-.91Z",
-          topPath:
-            "M.63,115.74c-.37-1.87.06-3.83,1.13-5.41,1.1-1.59,2.78-2.64,4.68-2.92l4.14-.68L503.67,19.45c3.83-.68,7.68-1.1,11.57-1.3L890,.6c3.4-.17,6.83-.11,10.23.11l495.47,32.68c3.85.25,7.71.76,11.54,1.5l381.26,75.03,4.05.85c1.96.4,3.63,1.59,4.65,3.29,1.02,1.73,1.28,3.77.71,5.67",
-          bottomPath:
-            "M1758.59,213.74l-356.09-70.07c-3.32-.65-6.69-1.11-10.09-1.33l-505.42-33.33c-2.98-.2-5.98-.23-8.96-.09l-341.4,15.99c-3.4.14-6.8.54-10.15,1.13L31.24,213.68",
-          topIsReversed: false,
-          bottomIsReversed: true,
+          path: "M1770.13,215.81l31.33-103.53-393-77.39a92.5,92.5,0,0,0-11.54-1.5L901.44.71A89.54,89.54,0,0,0,891.21.6L516.44,18.15a93.51,93.51,0,0,0-11.57,1.3L.59,108.69l20.69,107L527.69,126a76.87,76.87,0,0,1,10.15-1.13l341.4-16a78.78,78.78,0,0,1,9,.09l505.42,33.33a79.13,79.13,0,0,1,10.09,1.33Z",
+          topPath: "M1801.46,112.28L1408.46,34.89a92.5,92.5,0,0,0-11.54-1.5L901.44,0.71A89.54,89.54,0,0,0,891.21,0.6L516.44,18.15a93.51,93.51,0,0,0-11.57,1.3L0.59,108.69",
+          bottomPath: "M21.28,215.69L527.69,126a76.87,76.87,0,0,1,10.15,-1.13l341.4,-16a78.78,78.78,0,0,1,9,0.09l505.42,33.33a79.13,79.13,0,0,1,10.09,1.33L1770.13,215.81",
+          topIsReversed: true,
+          bottomIsReversed: false,
           modelPath: "./assets/models/500gms_sweet_t.glb",
           targetMaterials: ["Bottom1"],
         },
@@ -1007,7 +1001,38 @@
         for (let i = 0; i < sliceCount; i++) {
           const t0 = i / sliceCount;
           const t1 = (i + 1) / sliceCount;
-          const edgeExtension = isSweetBox ? 0.03 : 0.01;
+          let edgeExtension = 0.01;
+          if (isSweetBox) {
+            if (shape.view === "bottom" && shape.name.includes("250g")) {
+                edgeExtension = 0; // specific for 250g sweet box bottom
+            } else if (shape.view === "bottom" && shape.name.includes("500g")) {
+                edgeExtension = 0; // specific for 500g sweet box bottom
+            } else {
+                edgeExtension = 0;
+            }
+          } else if (isWideShape) {
+            if (shape.name.includes("450ml")) {
+                edgeExtension = 0.015; // specific for 450ml round square
+            } else if (shape.name.includes("500ml")) {
+                edgeExtension = 0.015; // specific for 500ml round square
+            } else {
+                edgeExtension = 0.015;
+            }
+          } else if (shape.type === "round") {
+            if (shape.name.includes("250ml")) {
+                edgeExtension = 0.015;
+            } else if (shape.name.includes("300ml")) {
+                edgeExtension = 0; // specific for 300ml
+            } else if (shape.name.includes("500ml")) {
+                edgeExtension = 0.015;
+            } else if (shape.name.includes("750ml")) {
+                edgeExtension = 0.015;
+            } else if (shape.name.includes("1000ml")) {
+                edgeExtension = 0.015;
+            } else {
+                edgeExtension = 0.015;
+            }
+          }
           const tTop0 = shape.topIsReversed ? 1 - t0 : t0;
           const tTop1 = shape.topIsReversed ? 1 - t1 : t1;
           const tBot0 = shape.bottomIsReversed ? 1 - t0 : t0;
@@ -1089,11 +1114,36 @@
 
           let verticalExtension = 0;
           if (shape.type !== "rectangle") {
-            if (isSweetBox) verticalExtension = isExport ? 40 : 20;
-            else if (isWideShape) verticalExtension = isExport ? 22 : 10;
-            else if (shape.type === "round") {
-              if (shape.name === "250ml Round") verticalExtension = 0;
-              else verticalExtension = isExport ? 10 : 0;
+            if (isSweetBox) {
+                if (shape.view === "bottom" && shape.name.includes("250g")) {
+                    verticalExtension = isExport ? 40 : 20; // specific for 250g sweet box bottom
+                } else if (shape.view === "bottom" && shape.name.includes("500g")) {
+                    verticalExtension = isExport ? 40 : 20; // specific for 500g sweet box bottom
+                } else {
+                    verticalExtension = isExport ? 40 : 20;
+                }
+            } else if (isWideShape) {
+                if (shape.name.includes("450ml")) {
+                    verticalExtension = isExport ? 22 : 10; // Adjust this value specifically for 450ml round square
+                } else if (shape.name.includes("500ml")) {
+                    verticalExtension = isExport ? 22 : 10; // Adjust this value specifically for 500ml round square
+                } else {
+                    verticalExtension = isExport ? 22 : 10;
+                }
+            } else if (shape.type === "round") {
+                if (shape.name.includes("250ml")) {
+                    verticalExtension = 0;
+                } else if (shape.name.includes("300ml")) {
+                    verticalExtension = isExport ? -1 : 0;
+                } else if (shape.name.includes("500ml")) {
+                    verticalExtension = isExport ? 8 : 5;
+                } else if (shape.name.includes("750ml")) {
+                    verticalExtension = isExport ? 10 : 8;
+                } else if (shape.name.includes("1000ml")) {
+                    verticalExtension = isExport ? 15 : 10;
+                } else {
+                    verticalExtension = isExport ? 10 : 0;
+                }
             }
           }
 
@@ -1516,6 +1566,9 @@
                 if (!height) height = vbParts[3];
               }
             }
+            
+            const originalWidth = width;
+            const originalHeight = height;
 
             // Force high resolution for warping quality
             if (shape && shape.uploadDimensions) {
@@ -1546,7 +1599,17 @@
 
             svgElement.setAttribute("width", width);
             svgElement.setAttribute("height", height);
-            if (!viewBox) svgElement.setAttribute("viewBox", `0 0 ${width} ${height}`);
+            
+            // Ensure no letterboxing gaps by explicitly stretching to fit exactly.
+            // Also preserve original viewBox so paths aren't incorrectly scaled.
+            svgElement.setAttribute("preserveAspectRatio", "none");
+            if (!viewBox) {
+                if (originalWidth && originalHeight) {
+                    svgElement.setAttribute("viewBox", `0 0 ${originalWidth} ${originalHeight}`);
+                } else {
+                    svgElement.setAttribute("viewBox", `0 0 ${width} ${height}`);
+                }
+            }
 
             svgText = new XMLSerializer().serializeToString(svgDoc);
             const blob = new Blob([svgText], { type: "image/svg+xml" });
@@ -1558,11 +1621,11 @@
                 const expectedWidth = shape.uploadDimensions.width;
                 const expectedHeight = shape.uploadDimensions.height;
 
-                if (width < expectedWidth || height < expectedHeight) {
+                if (originalWidth < expectedWidth || originalHeight < expectedHeight) {
                   hideLoading();
                   showError(
                     "Image Too Small",
-                    `The image dimensions (${Math.round(width)} × ${Math.round(height)}px) are smaller than required.\n\nMinimum size: ${expectedWidth} × ${expectedHeight}px`
+                    `The image dimensions (${Math.round(originalWidth)} × ${Math.round(originalHeight)}px) are smaller than required.\n\nMinimum size: ${expectedWidth} × ${expectedHeight}px`
                   );
                   currentImage = null;
                   currentImageDataUrl = null;
@@ -1938,8 +2001,8 @@
         let u = srcBounds.width > 0  ? (px - srcBounds.x) / srcBounds.width  : 0.5;
         let v = srcBounds.height > 0 ? (py - srcBounds.y) / srcBounds.height : 0.5;
 
-        // Apply sweet_box bleeding extensions similar to raster drawWarp
-        if (shape) {
+        // Apply bleeding extensions similar to raster drawWarp to prevent gaps
+        if (shape && shape.type !== "rectangle") {
           const isSweetBox = shape.type === "sweet_box" || shape.type === "sweet_box_te";
           const isWideShape = shape.type === "round_square";
           const isLargeRound = shape.type === "round" && ["300ml","500ml","750ml","1000ml"].some(x => shape.name.includes(x));
@@ -1947,15 +2010,58 @@
           let edgeExt = 0;
           let viewExt = 0; // vertical extension
           
-          // DO NOT apply edgeExt and viewExt scaling for sweet_box during SVG warp
-          // if (isSweetBox) { edgeExt = 0.03; viewExt = 40; }
-          // if (isWideShape) { viewExt = 22; }
-          // if (shape.type === "round" && !shape.name.includes("250ml")) { viewExt = 10; }
+          // Extend warp boundaries so vector graphic bleeds slightly out 
+          // before hitting the strict shape.path clipMask.
+          if (isSweetBox) {
+            if (shape.view === "bottom" && shape.name.includes("250g")) {
+                edgeExt = 0.006;
+                viewExt = 0; // Adjust specifically for 250g sweet box bottom
+            } else if (shape.view === "bottom" && shape.name.includes("500g")) {
+                edgeExt = 0;
+                viewExt = 0; // Adjust specifically for 500g sweet box bottom
+            } else {
+                edgeExt = 0;
+                viewExt = 0;
+            }
+          } else {
+            if (isWideShape) {
+                if (shape.name.includes("450ml")) {
+                    edgeExt = 0.001;
+                    viewExt = 4.5; // Adjust this value specifically for 450ml round square
+                } else if (shape.name.includes("500ml")) {
+                    edgeExt = 0.015;
+                    viewExt = 7; // Adjust this value specifically for 500ml round square
+                } else {
+                    edgeExt = 0.015;
+                    viewExt = 6;
+                }
+            } else if (shape.type === "round") {
+                if (shape.name.includes("250ml")) {
+                    edgeExt = 0.015;
+                    viewExt = 2;
+                } else if (shape.name.includes("300ml")) {
+                    edgeExt = 0.006;
+                    viewExt = -3; // Adjust this value specifically for 300ml
+                } else if (shape.name.includes("500ml")) {
+                    edgeExt = 0;
+                    viewExt = -2; // Adjust this value specifically for 500ml
+                } else if (shape.name.includes("750ml")) {
+                    edgeExt = 0.001;
+                    viewExt = -2; // Adjust this value specifically for 750ml
+                } else if (shape.name.includes("1000ml")) {
+                    edgeExt = 0.001;
+                    viewExt = -2; // Adjust this value specifically for 1000ml
+                } else {
+                    edgeExt = 0.015;
+                    viewExt = 10;
+                }
+            }
+          }
 
-          if (edgeExt > 0) {
+          if (edgeExt !== 0) {
             u = u * (1 + 2 * edgeExt) - edgeExt;
           }
-          if (viewExt > 0) {
+          if (viewExt !== 0 && shape.height > 0) {
             // Normalize viewExt relative to the shape height to extend v
             const vExtRatio = viewExt / shape.height;
             v = v * (1 + 2 * vExtRatio) - vExtRatio;

@@ -2919,6 +2919,18 @@
             flattenSVGTransforms(child, _IDENTITY_M.slice(), ns, true)
           );
 
+          // ── PHASE 1b: Flatten transforms inside <clipPath> defs ──────────
+          // clipPath children live in the same coordinate space as artwork,
+          // so they must also have their transforms resolved before warping.
+          const defsEl = root.querySelector("defs");
+          if (defsEl) {
+            Array.from(defsEl.querySelectorAll("clipPath")).forEach(cpEl => {
+              Array.from(cpEl.children).forEach(child => {
+                flattenSVGTransforms(child, _IDENTITY_M.slice(), ns, false);
+              });
+            });
+          }
+
           // ── Rewire output viewBox to match shape bounds ──────────────────
           root.setAttribute("viewBox", `0 0 ${shape.width} ${shape.height}`);
           root.removeAttribute("width");
@@ -2960,6 +2972,130 @@
             warpNode(child, doc, ns, srcBounds, topPP, bottomPP,
                      shape.topIsReversed, shape.bottomIsReversed, 2, 0.5, shape)
           );
+
+          // ── PHASE 2b: Warp paths inside <clipPath> defs ─────────────────
+          // Any <clipPath> whose children reference artwork coordinates must
+          // be warped through the same envelope so the clip region matches
+          // the warped artwork (fixes invisible gradient-filled rect clips).
+          if (defsEl) {
+            Array.from(defsEl.querySelectorAll("clipPath")).forEach(cpEl => {
+              // Skip the shape-trim clipPath we just added — don't warp it
+              if (cpEl.getAttribute("id") === clipId) return;
+              Array.from(cpEl.children).forEach(child => {
+                warpNode(child, doc, ns, srcBounds, topPP, bottomPP,
+                         shape.topIsReversed, shape.bottomIsReversed, 2, 0.5, shape);
+              });
+            });
+          }
+
+          // ── PHASE 2c: Warp gradient & pattern coordinate points ──────────
+          // linearGradient / radialGradient / pattern with
+          // *Units="userSpaceOnUse" define their geometry in the same absolute
+          // coordinate space as the artwork.  After warp those old coords are
+          // stale → gradients render solid / wrong colour.
+          // objectBoundingBox gradients use 0-1 fractions relative to the
+          // element bbox and need no adjustment.
+          if (defsEl) {
+            // Helper: bake a gradientTransform/patternTransform into the
+            // explicit coordinate attributes and remove the transform attr.
+            const bakeTransformIntoAttrs = (el, attrPairs, transformAttr) => {
+              const gt = el.getAttribute(transformAttr);
+              if (!gt) return;
+              const m = parseSVGTransform(gt);
+              if (_isIdentity(m)) { el.removeAttribute(transformAttr); return; }
+              for (const [xAttr, yAttr] of attrPairs) {
+                if (el.hasAttribute(xAttr) || el.hasAttribute(yAttr)) {
+                  const x = parseFloat(el.getAttribute(xAttr) || "0");
+                  const y = parseFloat(el.getAttribute(yAttr) || "0");
+                  const tp = _txPt(x, y, m);
+                  el.setAttribute(xAttr, warpF(tp.x));
+                  el.setAttribute(yAttr, warpF(tp.y));
+                }
+              }
+              el.removeAttribute(transformAttr);
+            };
+
+            // Helper: warp one (x,y) attribute pair through the envelope
+            const warpGradPt = (el, xAttr, yAttr, fallbackX, fallbackY) => {
+              const x = parseFloat(el.getAttribute(xAttr) ?? String(fallbackX));
+              const y = parseFloat(el.getAttribute(yAttr) ?? String(fallbackY));
+              const wp = envelopeTransformForShape(
+                x, y, srcBounds, topPP, bottomPP,
+                shape.topIsReversed, shape.bottomIsReversed, shape
+              );
+              el.setAttribute(xAttr, warpF(wp.x));
+              el.setAttribute(yAttr, warpF(wp.y));
+              return wp;
+            };
+
+            // ── linearGradient ──────────────────────────────────────────────
+            Array.from(defsEl.querySelectorAll("linearGradient")).forEach(g => {
+              const units = g.getAttribute("gradientUnits") || "objectBoundingBox";
+              if (units !== "userSpaceOnUse") return;
+
+              // Bake gradientTransform into x1/y1, x2/y2 first
+              bakeTransformIntoAttrs(g, [["x1","y1"],["x2","y2"]], "gradientTransform");
+
+              warpGradPt(g, "x1", "y1", 0, 0);
+              warpGradPt(g, "x2", "y2", srcBounds.width, 0);
+            });
+
+            // ── radialGradient ──────────────────────────────────────────────
+            Array.from(defsEl.querySelectorAll("radialGradient")).forEach(g => {
+              const units = g.getAttribute("gradientUnits") || "objectBoundingBox";
+              if (units !== "userSpaceOnUse") return;
+
+              // Bake gradientTransform into cx/cy and fx/fy first
+              bakeTransformIntoAttrs(g, [["cx","cy"],["fx","fy"]], "gradientTransform");
+
+              const cx = parseFloat(g.getAttribute("cx") || String(srcBounds.x + srcBounds.width  * 0.5));
+              const cy = parseFloat(g.getAttribute("cy") || String(srcBounds.y + srcBounds.height * 0.5));
+              const r  = parseFloat(g.getAttribute("r")  || "0");
+              const hasFx = g.hasAttribute("fx");
+              const hasFy = g.hasAttribute("fy");
+
+              // Warp centre
+              const pc = envelopeTransformForShape(
+                cx, cy, srcBounds, topPP, bottomPP,
+                shape.topIsReversed, shape.bottomIsReversed, shape
+              );
+              g.setAttribute("cx", warpF(pc.x));
+              g.setAttribute("cy", warpF(pc.y));
+
+              // Warp focal point (defaults to centre)
+              const fx = parseFloat(g.getAttribute("fx") || String(cx));
+              const fy = parseFloat(g.getAttribute("fy") || String(cy));
+              const pf = envelopeTransformForShape(
+                fx, fy, srcBounds, topPP, bottomPP,
+                shape.topIsReversed, shape.bottomIsReversed, shape
+              );
+              if (hasFx) g.setAttribute("fx", warpF(pf.x));
+              if (hasFy) g.setAttribute("fy", warpF(pf.y));
+
+              // Approximate new radius: warp (cx+r, cy) and measure distance
+              if (r > 0) {
+                const pr = envelopeTransformForShape(
+                  cx + r, cy, srcBounds, topPP, bottomPP,
+                  shape.topIsReversed, shape.bottomIsReversed, shape
+                );
+                const newR = Math.hypot(pr.x - pc.x, pr.y - pc.y);
+                g.setAttribute("r", warpF(newR));
+              }
+            });
+
+            // ── pattern (userSpaceOnUse) ────────────────────────────────────
+            // Warp the pattern's x/y position; width/height stay as tile size.
+            Array.from(defsEl.querySelectorAll("pattern")).forEach(p => {
+              const units = p.getAttribute("patternUnits") || "objectBoundingBox";
+              if (units !== "userSpaceOnUse") return;
+
+              bakeTransformIntoAttrs(p, [["x","y"]], "patternTransform");
+
+              if (p.hasAttribute("x") || p.hasAttribute("y")) {
+                warpGradPt(p, "x", "y", 0, 0);
+              }
+            });
+          }
 
           // Cleanup Paper.js paths
           topPP.remove();

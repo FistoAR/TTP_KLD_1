@@ -395,6 +395,21 @@
       ];
 
       const allBottleShapes = {
+        "120ml_round": {
+          type: "round",
+          view: "bottom",
+          name: "120ml Round",
+          width: 606,
+          height: 129.22,
+          uploadDimensions: { width: 2048, height: 470 },
+          path: "M579.09,129.04l-1.4-.3s-.96-.22-1.38-.36c-178.88-48.56-367.75-48.56-546.63,0-.39.13-1.38.37-1.38.37l-1.4.3L.18,43.48c197.67-57.73,407.97-57.73,605.64,0l-26.72,85.55Z",
+          topPath: "M.18,43.48c197.67-57.73,407.97-57.73,605.64,0",
+          bottomPath: "M579.09,129.04l-1.4-.3s-.96-.22-1.38-.36c-178.88-48.56-367.75-48.56-546.63,0-.39.13-1.38.37-1.38.37l-1.4.3",
+          topIsReversed: false,
+          bottomIsReversed: true,
+          modelPath: "./assets/models/120ml_round_t.glb",
+          targetMaterials: ["Texture"],
+        },
         "250ml_round": {
           type: "round",
           view: "bottom",
@@ -1131,7 +1146,7 @@
                     verticalExtension = isExport ? 22 : 10;
                 }
             } else if (shape.type === "round") {
-                if (shape.name.includes("250ml")) {
+                if (shape.name.includes("120ml") || shape.name.includes("250ml")) {
                     verticalExtension = 0;
                 } else if (shape.name.includes("300ml")) {
                     verticalExtension = isExport ? -1 : 0;
@@ -2043,7 +2058,11 @@
                     viewExtBottom = 0;
                 }
             } else if (shape.type === "round") {
-                if (shape.name.includes("250ml")) {
+              if(shape.name.includes("120ml")) {
+                    edgeExt = 0;
+                    viewExtTop = -0.5;
+                    viewExtBottom = -0.5;
+              } else if (shape.name.includes("250ml")) {
                     edgeExt = 0;
                     viewExtTop = 0;
                     viewExtBottom = 0;

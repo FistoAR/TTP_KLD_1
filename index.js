@@ -8,7 +8,7 @@
       }
 
       // ========== STATE ==========
-      let currentImage = null;
+      let currentImage = null; //null
       let currentImageDataUrl = null;
       let textureImageDataUrl = null;
       let currentSVGRawText = null;       // Raw SVG source text for vector-native envelope warp export
